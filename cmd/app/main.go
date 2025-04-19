@@ -1,12 +1,11 @@
 package main
 
 import (
-	"github.com/misalima/edunex-backend/internal/api"
-	"log"
-
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/misalima/edunex-backend/internal/api"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
+	"log"
 )
 
 func main() {
@@ -14,8 +13,8 @@ func main() {
 		log.Println("Aviso: Arquivo .env não encontrado, usando variáveis de ambiente padrão")
 	}
 
-	db.Connect()
-	defer db.Close()
+	postgres.Connect()
+	defer postgres.Close()
 
 	e := echo.New()
 
@@ -23,4 +22,5 @@ func main() {
 
 	log.Println("Servidor iniciado na porta 8080")
 	log.Fatal(e.Start(":8080"))
+
 }
