@@ -2,99 +2,118 @@ package postgres
 
 import (
 	"context"
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/misalima/edunex-backend/internal/core/domain"
+	"errors"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/misalima/edunex-backend/internal/core/domain"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
+	"gorm.io/gorm"
 )
 
-type UserRepository struct {
-	db *pgxpool.Pool
+// ensure GormUserRepository implements the UserLoader interface
+var _ irepository.UserLoader = (*GormUserRepository)(nil)
+
+// userModel maps to the users table and contains GORM tags.
+// We keep domain.User free of GORM tags per hexagonal architecture.
+type userModel struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Name      string    `gorm:"type:varchar(255);not null"`
+	Email     string    `gorm:"type:varchar(255);uniqueIndex;not null"`
+	Password  string    `gorm:"type:varchar(255);not null"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`
 }
 
-func NewUserRepository(db *pgxpool.Pool) *UserRepository {
-	return &UserRepository{db: db}
+func (userModel) TableName() string {
+	return "users"
 }
 
-func (r *UserRepository) InsertUser(ctx context.Context, user *domain.User) (string, error) {
-	query := `
-		INSERT INTO users (name, email, password, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id`
+// toDomain converts userModel to domain.User
+func (m *userModel) toDomain() *domain.User {
+	if m == nil {
+		return nil
+	}
+	return &domain.User{
+		ID:       m.ID,
+		Name:     m.Name,
+		Email:    m.Email,
+		Password: m.Password,
+		Created:  m.CreatedAt,
+		Updated:  m.UpdatedAt,
+	}
+}
 
-	var id string
-	err := r.db.QueryRow(ctx, query,
-		user.Name,
-		user.Email,
-		user.Password,
-		time.Now(),
-		time.Now(),
-	).Scan(&id)
+// fromDomain creates a userModel from domain.User. It does not overwrite ID when it's zero.
+func fromDomain(u *domain.User) *userModel {
+	m := &userModel{
+		Name:     u.Name,
+		Email:    u.Email,
+		Password: u.Password,
+	}
+	if u.ID != uuid.Nil {
+		m.ID = u.ID
+	}
+	return m
+}
 
-	if err != nil {
+// GormUserRepository is the GORM implementation of UserLoader
+type GormUserRepository struct {
+	db *gorm.DB
+}
+
+// NewGormUserRepository creates a new repository using GORM DB
+func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
+	return &GormUserRepository{db: db}
+}
+
+// InsertUser inserts a user and returns the created id as string
+func (r *GormUserRepository) InsertUser(ctx context.Context, user *domain.User) (string, error) {
+	m := fromDomain(user)
+	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
 		return "", err
 	}
-
-	return id, nil
+	return m.ID.String(), nil
 }
 
-func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
-	query := `SELECT id, name, email, password, created_at, updated_at FROM users WHERE id = $1`
-	user := &domain.User{}
-
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&user.ID,
-		&user.Name,
-		&user.Email,
-		&user.Password,
-		&user.Created,
-		&user.Updated,
-	)
-
-	if err != nil {
+// GetUserByID fetches a user by UUID
+func (r *GormUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+	m := &userModel{}
+	if err := r.db.WithContext(ctx).First(m, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
-
-	return user, nil
+	return m.toDomain(), nil
 }
 
-func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
-	query := `SELECT id, name, email, password, created_at, updated_at FROM users WHERE email = $1`
-	user := &domain.User{}
-
-	err := r.db.QueryRow(ctx, query, email).Scan(
-		&user.ID,
-		&user.Name,
-		&user.Email,
-		&user.Password,
-		&user.Created,
-		&user.Updated,
-	)
-
-	if err != nil {
+// GetUserByEmail fetches a user by email
+func (r *GormUserRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+	m := &userModel{}
+	if err := r.db.WithContext(ctx).First(m, "email = ?", email).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
-
-	return user, nil
+	return m.toDomain(), nil
 }
 
-func (r *UserRepository) UpdateUser(ctx context.Context, user *domain.User) error {
-	query := `
-		UPDATE users
-		SET name = $1, email = $2, password = $3, updated_at = $4
-		WHERE id = $5`
-
-	_, err := r.db.Exec(ctx, query,
-		user.Name,
-		user.Email,
-		user.Password,
-		time.Now(),
-		user.ID,
-	)
-
-	if err != nil {
+// UpdateUser updates mutable fields of a user
+func (r *GormUserRepository) UpdateUser(ctx context.Context, user *domain.User) error {
+	m := fromDomain(user)
+	if m.ID == uuid.Nil {
+		return errors.New("user ID is required")
+	}
+	updates := map[string]interface{}{
+		"name":       m.Name,
+		"email":      m.Email,
+		"password":   m.Password,
+		"updated_at": time.Now(),
+	}
+	if err := r.db.WithContext(ctx).Model(&userModel{}).Where("id = ?", m.ID).Updates(updates).Error; err != nil {
 		return err
 	}
-
 	return nil
 }

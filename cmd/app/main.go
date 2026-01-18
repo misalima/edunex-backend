@@ -8,7 +8,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/misalima/edunex-backend/internal/api"
-	"github.com/misalima/edunex-backend/internal/infra/database"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
 )
 
@@ -29,8 +28,8 @@ func main() {
 		)
 	}
 
-	// Initialize GORM DB
-	db, err := database.InitDB(dsn)
+	// Initialize GORM DB using the postgres package (GORM initializer)
+	db, err := postgres.InitDB(dsn)
 	if err != nil {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
