@@ -7,7 +7,9 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/misalima/edunex-backend/internal/api"
+	"github.com/misalima/edunex-backend/internal/api/container"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
 )
 
@@ -34,13 +36,12 @@ func main() {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
 
-	// Create GORM-based user repository and keep a reference
-	repo := postgres.NewGormUserRepository(db)
-	_ = repo // use or pass repo into services/handlers
-
+	// Initialize the API container with dependencies
+	ctn := container.NewContainer(db)
 	e := echo.New()
+	api.RegisterRoutes(e, ctn)
 
-	api.RegisterRoutes(e)
+	e.Use(middleware.Logger())
 
 	log.Println("Servidor iniciado na porta 8080")
 	log.Fatal(e.Start(":8080"))

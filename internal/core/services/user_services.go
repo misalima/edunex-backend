@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
@@ -35,6 +36,7 @@ func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domai
 		return nil, err
 	}
 	if existingUser != nil {
+
 		return nil, errors.New("email already exists")
 	}
 
@@ -90,4 +92,13 @@ func (s *UserService) UpdateUser(ctx context.Context, user *domain.User) error {
 	}
 
 	return nil
+}
+
+func (s *UserService) ListUsers(ctx context.Context) ([]*domain.User, error) {
+	users, err := s.userRepo.ListUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }

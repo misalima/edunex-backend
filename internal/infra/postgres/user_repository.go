@@ -117,3 +117,16 @@ func (r *GormUserRepository) UpdateUser(ctx context.Context, user *domain.User) 
 	}
 	return nil
 }
+
+// ListUsers returns all users ordered by created_at
+func (r *GormUserRepository) ListUsers(ctx context.Context) ([]*domain.User, error) {
+	var models []userModel
+	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&models).Error; err != nil {
+		return nil, err
+	}
+	users := make([]*domain.User, len(models))
+	for i := range models {
+		users[i] = models[i].toDomain()
+	}
+	return users, nil
+}
