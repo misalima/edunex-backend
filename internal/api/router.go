@@ -11,4 +11,6 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 	userGroup := e.Group("/users")
 	userGroup.POST("", c.UserHandler.CreateUser)
 	userGroup.GET("", c.UserHandler.ListUsers)
+	userGroup.GET("/:id", c.UserHandler.GetUserByID)
+	userGroup.PUT("/:id", c.UserHandler.UpdateUser)
 }

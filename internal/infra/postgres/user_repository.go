@@ -106,12 +106,21 @@ func (r *GormUserRepository) UpdateUser(ctx context.Context, user *domain.User) 
 	if m.ID == uuid.Nil {
 		return errors.New("user ID is required")
 	}
+
 	updates := map[string]interface{}{
-		"name":       m.Name,
-		"email":      m.Email,
-		"password":   m.Password,
 		"updated_at": time.Now(),
 	}
+
+	if m.Name != "" {
+		updates["name"] = m.Name
+	}
+	if m.Email != "" {
+		updates["email"] = m.Email
+	}
+	if m.Password != "" {
+		updates["password"] = m.Password
+	}
+
 	if err := r.db.WithContext(ctx).Model(&userModel{}).Where("id = ?", m.ID).Updates(updates).Error; err != nil {
 		return err
 	}

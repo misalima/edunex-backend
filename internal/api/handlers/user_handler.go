@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/gommon/log"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/request"
@@ -55,4 +57,52 @@ func (u *UserHandler) ListUsers(c echo.Context) error {
 
 	resp := response.FromDomainListUserToResponse(users)
 	return c.JSON(http.StatusOK, resp)
+}
+
+func (u *UserHandler) GetUserByID(c echo.Context) error {
+
+	idParam := strings.TrimSpace(c.Param("id"))
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		log.Errorf("Error parsing user id %s: %s", id, err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user id"})
+	}
+
+	user, err := u.svc.GetUserByID(c.Request().Context(), id)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+	if user == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
+	}
+
+	resp := response.FromDomainUserToResponse(user)
+	return c.JSON(http.StatusOK, resp)
+}
+
+func (u *UserHandler) UpdateUser(c echo.Context) error {
+	idParam := c.Param("id")
+	id, err := uuid.Parse(idParam)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user id"})
+	}
+
+	var req request.UpdateUserRequest
+	if err := c.Bind(&req); err != nil {
+		log.Error(err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request payload"})
+	}
+
+	// Create domain user with fields to update. Only Name is supported by UpdateUserRequest.
+	user := domain.User{
+		ID:   id,
+		Name: req.Name,
+	}
+
+	err = u.svc.UpdateUser(c.Request().Context(), &user)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
