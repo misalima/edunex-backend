@@ -2,6 +2,8 @@ package request
 
 import (
 	"errors"
+
+	"github.com/misalima/edunex-backend/internal/core/domain"
 )
 
 type CreateUserRequest struct {
@@ -12,6 +14,14 @@ type CreateUserRequest struct {
 
 type UpdateUserRequest struct {
 	Name string `json:"name"`
+}
+
+func (req *CreateUserRequest) ToDomain() *domain.User {
+	return &domain.User{
+		Name:     req.Name,
+		Email:    req.Email,
+		Password: req.Password,
+	}
 }
 
 func (req *CreateUserRequest) ValidateCreateUserRequest() error {

@@ -8,6 +8,7 @@ import (
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var _ iservice.UserManager = (*UserService)(nil)
@@ -37,8 +38,14 @@ func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domai
 	}
 	if existingUser != nil {
 
-		return nil, errors.New("email already exists")
+		return nil, errors.New("email already in use")
 	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	user.Password = string(hashedPassword)
 
 	id, err := s.userRepo.InsertUser(ctx, user)
 	if err != nil {

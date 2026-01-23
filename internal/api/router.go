@@ -13,4 +13,10 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 	userGroup.GET("", c.UserHandler.ListUsers)
 	userGroup.GET("/:id", c.UserHandler.GetUserByID)
 	userGroup.PUT("/:id", c.UserHandler.UpdateUser)
+
+	authGroup := e.Group("/auth")
+	authGroup.POST("/sign-up", c.AuthHandler.SignUp)
+	authGroup.POST("/login", c.AuthHandler.Login)
+	authGroup.POST("/refresh", c.AuthHandler.Refresh)
+	authGroup.POST("/logout", c.AuthHandler.Logout)
 }
