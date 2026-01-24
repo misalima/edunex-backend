@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
+	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
 	"golang.org/x/crypto/bcrypt"
@@ -24,47 +25,49 @@ func NewUserService(userRepo irepository.UserLoader) *UserService {
 }
 
 func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
-	if user.Name == "" || user.Email == "" || user.Password == "" {
-		return nil, errors.New("missing required fields")
+	if user == nil || user.Name == "" || user.Email == "" || user.Password == "" {
+		return nil, domain_errors.NewBadRequestMsg("missing required fields")
 	}
 
 	if user.ID != uuid.Nil {
-		return nil, errors.New("user ID should not be set")
+		return nil, domain_errors.NewBadRequestMsg("user ID should not be set")
 	}
 
 	existingUser, err := s.userRepo.GetUserByEmail(ctx, user.Email)
 	if err != nil {
-		return nil, err
-	}
-	if existingUser != nil {
-		return nil, errors.New("email already in use")
+		if errors.Is(err, domain_errors.ErrUserNotFound) || errors.Is(err, domain_errors.ErrNotFound) {
+		} else {
+			return nil, err
+		}
+	} else if existingUser != nil {
+		return nil, domain_errors.NewConflictMsg("email already in use")
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, domain_errors.WrapUnexpectedMsg(err, "failed to hash password")
 	}
 	user.Password = string(hashedPassword)
 
-	user.Role = "coordinator"
+	if user.Role == "" {
+		user.Role = "coordinator"
+	}
 
 	id, err := s.userRepo.InsertUser(ctx, user)
 	if err != nil {
 		return nil, err
 	}
 
-	user.ID, err = uuid.Parse(id)
-	if err != nil {
-		return nil, errors.New("invalid user ID")
-	}
-
-	user, err = s.userRepo.GetUserByID(ctx, user.ID)
+	createdUser, err := s.userRepo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	return user, nil
+	createdUser.Password = ""
+
+	return createdUser, nil
 }
+
 func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	user, err := s.userRepo.GetUserByID(ctx, id)
 	if err != nil {
@@ -72,30 +75,36 @@ func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.Us
 	}
 
 	if user == nil {
-		return nil, errors.New("user not found")
+		return nil, domain_errors.NewNotFoundMsg("user not found")
 	}
 
+	user.Password = ""
 	return user, nil
 }
+
 func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	user, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
+		if errors.Is(err, domain_errors.ErrUserNotFound) || errors.Is(err, domain_errors.ErrNotFound) {
+			return nil, domain_errors.NewNotFoundMsg("user not found")
+		}
 		return nil, err
 	}
 
 	if user == nil {
-		return nil, errors.New("user not found")
+		return nil, domain_errors.NewNotFoundMsg("user not found")
 	}
 
+	user.Password = ""
 	return user, nil
 }
+
 func (s *UserService) UpdateUser(ctx context.Context, user *domain.User) error {
-	if user.ID == uuid.Nil {
-		return errors.New("user ID is required")
+	if user == nil || user.ID == uuid.Nil {
+		return domain_errors.NewBadRequestMsg("user ID is required")
 	}
 
-	err := s.userRepo.UpdateUser(ctx, user)
-	if err != nil {
+	if err := s.userRepo.UpdateUser(ctx, user); err != nil {
 		return err
 	}
 
@@ -108,12 +117,26 @@ func (s *UserService) ListUsers(ctx context.Context) ([]*domain.User, error) {
 		return nil, err
 	}
 
+	for _, u := range users {
+		u.Password = ""
+	}
 	return users, nil
 }
 
-func (s *UserService) UpdateUserRole(ctx context.Context, userID string, newRole string) error {
-	if newRole != "admin" && newRole != "coordinator" && newRole != "teacher" {
-		return errors.New("invalid role")
+func (s *UserService) UpdateUserRole(ctx context.Context, userID uuid.UUID, newRole string) error {
+	switch newRole {
+	case "admin", "coordinator", "teacher":
+	default:
+		return domain_errors.NewBadRequestMsg("invalid role")
 	}
-	return s.userRepo.UpdateRole(ctx, userID, newRole)
+
+	if userID == uuid.Nil {
+		return domain_errors.NewBadRequestMsg("user ID is required")
+	}
+
+	if err := s.userRepo.UpdateRole(ctx, userID, newRole); err != nil {
+		return err
+	}
+
+	return nil
 }

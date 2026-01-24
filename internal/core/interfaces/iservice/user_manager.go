@@ -13,5 +13,5 @@ type UserManager interface {
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
 	ListUsers(ctx context.Context) ([]*domain.User, error)
-	UpdateUserRole(ctx context.Context, userID string, newRole string) error
+	UpdateUserRole(ctx context.Context, userID uuid.UUID, newRole string) error
 }

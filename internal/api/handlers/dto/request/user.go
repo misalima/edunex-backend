@@ -3,6 +3,7 @@ package request
 import (
 	"errors"
 
+	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 )
 
@@ -38,6 +39,6 @@ func (req *CreateUserRequest) ValidateCreateUserRequest() error {
 }
 
 type UpdateRoleRequest struct {
-	UserID string `json:"user_id" validate:"required"`
-	Role   string `json:"role" validate:"required"`
+	UserID uuid.UUID `json:"user_id" validate:"required"`
+	Role   string    `json:"role" validate:"required"`
 }

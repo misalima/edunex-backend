@@ -113,6 +113,10 @@ func (h *UserHandler) UpdateRole(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request payload"})
 	}
 
+	if req.UserID == uuid.Nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user id"})
+	}
+
 	err := h.svc.UpdateUserRole(c.Request().Context(), req.UserID, req.Role)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})

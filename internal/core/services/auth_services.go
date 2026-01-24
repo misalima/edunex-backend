@@ -2,19 +2,14 @@ package services
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
 	"github.com/misalima/edunex-backend/internal/core/util"
 	"golang.org/x/crypto/bcrypt"
-)
-
-var (
-	ErrInvalidCredentials = errors.New("credenciais inválidas")
-	ErrUserNotFound       = errors.New("usuário não encontrado")
 )
 
 type AuthService struct {
@@ -34,20 +29,20 @@ func NewAuthService(authRepo irepository.AuthLoader, userRepo irepository.UserLo
 func (s *AuthService) Login(ctx context.Context, email, password string) (*util.LoginResponse, error) {
 	user, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		return nil, ErrUserNotFound
+		return nil, domain_errors.ErrUserNotFound
 	}
 	if user == nil {
-		return nil, ErrUserNotFound
+		return nil, domain_errors.ErrUserNotFound
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
-		return nil, ErrInvalidCredentials
+		return nil, domain_errors.ErrInvalidCredentials
 	}
 
 	accessToken, err := s.jwtSvc.GenerateToken(user.ID.String(), user.Role)
 	if err != nil {
-		return nil, err
+		return nil, domain_errors.WrapUnexpectedMsg(err, "error generating access token")
 	}
 
 	refreshToken := uuid.New().String()
@@ -55,7 +50,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*util.
 
 	refToken, err := s.authRepo.CreateRefreshToken(ctx, user.ID, refreshToken, expiresAt)
 	if err != nil {
-		return nil, errors.New("error creating refresh token")
+		return nil, domain_errors.WrapUnexpectedMsg(err, "error creating refresh token")
 	}
 
 	user.Password = ""
@@ -70,27 +65,30 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*util.
 func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (string, error) {
 	tokenData, err := s.authRepo.FindRefreshTokenByToken(ctx, refreshToken)
 	if err != nil {
-		return "", errors.New("invalid session")
+		return "", domain_errors.NewUnauthorizedMsg("invalid session")
 	}
 
-	if time.Now().After(tokenData.ExpiresAt) {
+	if tokenData == nil || time.Now().After(tokenData.ExpiresAt) {
 		_ = s.authRepo.DeleteRefreshTokenByToken(ctx, refreshToken)
-		return "", errors.New("invalid session")
+		return "", domain_errors.NewUnauthorizedMsg("invalid session")
 	}
 
 	user, err := s.userRepo.GetUserByID(ctx, tokenData.UserID)
 	if err != nil || user == nil {
-		return "", errors.New("user not found")
+		return "", domain_errors.ErrUserNotFound
 	}
 
 	newAccessToken, err := s.jwtSvc.GenerateToken(tokenData.UserID.String(), user.Role)
 	if err != nil {
-		return "", errors.New("error generating new access token")
+		return "", domain_errors.WrapUnexpectedMsg(err, "error generating new access token")
 	}
 
 	return newAccessToken, nil
 }
 
 func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
-	return s.authRepo.DeleteRefreshTokenByToken(ctx, refreshToken)
+	if err := s.authRepo.DeleteRefreshTokenByToken(ctx, refreshToken); err != nil {
+		return domain_errors.WrapUnexpectedMsg(err, "error deleting refresh token")
+	}
+	return nil
 }

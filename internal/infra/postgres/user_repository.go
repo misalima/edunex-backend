@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
+	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
 	"gorm.io/gorm"
 )
@@ -71,12 +72,15 @@ func NewGormUserRepository(db *gorm.DB) *UserRepository {
 }
 
 // InsertUser inserts a user and returns the created id as string
-func (r *UserRepository) InsertUser(ctx context.Context, user *domain.User) (string, error) {
+func (r *UserRepository) InsertUser(ctx context.Context, user *domain.User) (uuid.UUID, error) {
 	m := fromDomain(user)
-	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
-		return "", err
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
 	}
-	return m.ID.String(), nil
+	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
+		return uuid.Nil, domain_errors.WrapUnexpectedMsg(err, "failed to insert user")
+	}
+	return m.ID, nil
 }
 
 // GetUserByID fetches a user by UUID
@@ -84,9 +88,9 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*domain
 	m := &userModel{}
 	if err := r.db.WithContext(ctx).First(m, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, domain_errors.NewNotFoundMsg("user not found")
 		}
-		return nil, err
+		return nil, domain_errors.WrapUnexpectedMsg(err, "failed to fetch user")
 	}
 	return m.toDomain(), nil
 }
@@ -96,9 +100,9 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 	m := &userModel{}
 	if err := r.db.WithContext(ctx).First(m, "email = ?", email).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, nil
+			return nil, domain_errors.NewNotFoundMsg("user not found")
 		}
-		return nil, err
+		return nil, domain_errors.WrapUnexpectedMsg(err, "failed to fetch user")
 	}
 	return m.toDomain(), nil
 }
@@ -107,7 +111,7 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*dom
 func (r *UserRepository) UpdateUser(ctx context.Context, user *domain.User) error {
 	m := fromDomain(user)
 	if m.ID == uuid.Nil {
-		return errors.New("user ID is required")
+		return domain_errors.NewBadRequestMsg("user ID is required for update")
 	}
 
 	updates := map[string]interface{}{
@@ -125,7 +129,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *domain.User) erro
 	}
 
 	if err := r.db.WithContext(ctx).Model(&userModel{}).Where("id = ?", m.ID).Updates(updates).Error; err != nil {
-		return err
+		return domain_errors.WrapUnexpectedMsg(err, "failed to update user")
 	}
 	return nil
 }
@@ -134,7 +138,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *domain.User) erro
 func (r *UserRepository) ListUsers(ctx context.Context) ([]*domain.User, error) {
 	var models []userModel
 	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&models).Error; err != nil {
-		return nil, err
+		return nil, domain_errors.WrapUnexpectedMsg(err, "failed to list users")
 	}
 	users := make([]*domain.User, len(models))
 	for i := range models {
@@ -143,6 +147,20 @@ func (r *UserRepository) ListUsers(ctx context.Context) ([]*domain.User, error) 
 	return users, nil
 }
 
-func (r *UserRepository) UpdateRole(ctx context.Context, userID string, role string) error {
-	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("role", role).Error
+func (r *UserRepository) UpdateRole(ctx context.Context, userID uuid.UUID, role string) error {
+
+	res := r.db.WithContext(ctx).
+		Model(&userModel{}).
+		Where("id = ?", userID).
+		Update("role", role)
+
+	if res.Error != nil {
+		return domain_errors.WrapUnexpectedMsg(res.Error, "failed to update user role")
+	}
+
+	if res.RowsAffected == 0 {
+		return domain_errors.NewNotFoundMsg("user not found")
+	}
+
+	return nil
 }
