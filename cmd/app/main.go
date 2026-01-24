@@ -15,7 +15,9 @@ import (
 	"github.com/misalima/edunex-backend/cmd/app/config"
 	"github.com/misalima/edunex-backend/internal/api/container"
 	"github.com/misalima/edunex-backend/internal/api/router"
+	"github.com/misalima/edunex-backend/internal/infra/logger"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -24,6 +26,11 @@ func main() {
 	}
 
 	cfg := config.Load()
+
+	logger.InitLogger()
+	defer func(Log *zap.Logger) {
+		_ = Log.Sync()
+	}(logger.Log)
 
 	db, err := postgres.InitDB(cfg.DBURL)
 	if err != nil {
@@ -72,4 +79,34 @@ func main() {
 func setupMiddleware(e *echo.Echo) {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+		LogStatus:   true,
+		LogURI:      true,
+		LogMethod:   true,
+		LogLatency:  true,
+		LogError:    true,
+		LogRemoteIP: true,
+		HandleError: true, // Importante para logar erros que chegam no Echo
+		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
+			if v.Error != nil {
+				logger.Log.Error("request error",
+					zap.String("method", v.Method),
+					zap.String("uri", v.URI),
+					zap.Int("status", v.Status),
+					zap.Error(v.Error),
+					zap.Duration("latency", v.Latency),
+					zap.String("ip", v.RemoteIP),
+				)
+			} else {
+				logger.Log.Info("request",
+					zap.String("method", v.Method),
+					zap.String("uri", v.URI),
+					zap.Int("status", v.Status),
+					zap.Duration("latency", v.Latency),
+					zap.String("ip", v.RemoteIP),
+				)
+			}
+			return nil
+		},
+	}))
 }
