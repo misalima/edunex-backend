@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -31,10 +30,17 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	loginData, err := h.authService.Login(c.Request().Context(), req.Email, req.Password)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid email or password"})
+		return response.JSONError(c, err)
 	}
 
-	cookie := &http.Cookie{Name: "refresh_token", Value: loginData.RefreshToken, Expires: time.Now().Add(7 * 24 * time.Hour), Path: "/", HttpOnly: true, Secure: false, SameSite: http.SameSiteStrictMode}
+	cookie := &http.Cookie{
+		Name:     "refresh_token",
+		Value:    loginData.RefreshToken,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode}
 
 	c.SetCookie(cookie)
 
@@ -62,7 +68,7 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 
 	createdUser, err := h.userService.CreateUser(c.Request().Context(), user)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "could not create user: " + err.Error()})
+		return response.JSONError(c, err)
 	}
 
 	if createdUser == nil {
@@ -71,7 +77,7 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 
 	loginData, err := h.authService.Login(c.Request().Context(), createdUser.Email, req.Password)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "could not authenticate user"})
+		return response.JSONError(c, err)
 	}
 
 	cookie := &http.Cookie{
@@ -91,8 +97,6 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 		User:  *userResponse,
 	}
 
-	fmt.Printf("DEBUG: Tipo do User na resposta: %T\n", loginResponse.User)
-
 	return c.JSON(http.StatusCreated, loginResponse)
 }
 
@@ -104,7 +108,7 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 
 	newAccessToken, err := h.authService.RefreshToken(c.Request().Context(), cookie.Value)
 	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid session"})
+		return response.JSONError(c, err)
 	}
 
 	resp := &response.RefreshTokenResponse{

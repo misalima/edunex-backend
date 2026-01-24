@@ -41,7 +41,7 @@ func (u *UserHandler) CreateUser(c echo.Context) error {
 
 	createdUser, err := u.svc.CreateUser(c.Request().Context(), &user)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err)
+		return response.JSONError(c, err)
 	}
 
 	userResponse := response.FromDomainUserToResponse(createdUser)
@@ -52,7 +52,7 @@ func (u *UserHandler) CreateUser(c echo.Context) error {
 func (u *UserHandler) ListUsers(c echo.Context) error {
 	users, err := u.svc.ListUsers(c.Request().Context())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, err)
+		return response.JSONError(c, err)
 	}
 
 	resp := response.FromDomainListUserToResponse(users)
@@ -70,7 +70,7 @@ func (u *UserHandler) GetUserByID(c echo.Context) error {
 
 	user, err := u.svc.GetUserByID(c.Request().Context(), id)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return response.JSONError(c, err)
 	}
 	if user == nil {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
@@ -93,7 +93,6 @@ func (u *UserHandler) UpdateUser(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request payload"})
 	}
 
-	// Create domain user with fields to update. Only Name is supported by UpdateUserRequest.
 	user := domain.User{
 		ID:   id,
 		Name: req.Name,
@@ -101,7 +100,7 @@ func (u *UserHandler) UpdateUser(c echo.Context) error {
 
 	err = u.svc.UpdateUser(c.Request().Context(), &user)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return response.JSONError(c, err)
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -119,7 +118,7 @@ func (h *UserHandler) UpdateRole(c echo.Context) error {
 
 	err := h.svc.UpdateUserRole(c.Request().Context(), req.UserID, req.Role)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return response.JSONError(c, err)
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "user role updated successfully"})
