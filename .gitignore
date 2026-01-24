@@ -10,6 +10,9 @@
 # Output of the go coverage tool
 *.coverprofile
 
+#environment files
+.env
+
 # Dependency directories (remove the comment below if you use Go modules vendor)
 # /vendor/
 
