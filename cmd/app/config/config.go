@@ -8,9 +8,12 @@ import (
 )
 
 type Config struct {
-	Port      string
-	DBURL     string
-	JWTSecret string
+	Port               string
+	DBURL              string
+	JWTSecret          string
+	SupabaseURL        string
+	SupabaseServiceKey string
+	SupabaseBucket     string
 }
 
 func Load() *Config {
@@ -26,9 +29,12 @@ func Load() *Config {
 	)
 
 	return &Config{
-		Port:      getEnv("PORT", "8080"),
-		DBURL:     dbURL,
-		JWTSecret: getEnv("JWT_SECRET", "secret-chave-muito-segura"),
+		Port:               getEnv("PORT", "8080"),
+		DBURL:              dbURL,
+		JWTSecret:          getEnv("JWT_SECRET", "secret-chave-muito-segura"),
+		SupabaseURL:        getEnv("SUPABASE_URL", ""),
+		SupabaseServiceKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
+		SupabaseBucket:     getEnv("SUPABASE_BUCKET", ""),
 	}
 }
 
