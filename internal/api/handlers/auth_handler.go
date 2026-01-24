@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -37,10 +38,13 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	c.SetCookie(cookie)
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"access_token": loginData.AccessToken,
-		"user":         loginData.User,
-	})
+	userResponse := response.FromDomainUserToResponse(loginData.User)
+	loginResponse := &response.LoginResponse{
+		Token: loginData.AccessToken,
+		User:  *userResponse,
+	}
+
+	return c.JSON(http.StatusOK, loginResponse)
 }
 
 func (h *AuthHandler) SignUp(c echo.Context) error {
@@ -86,6 +90,8 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 		Token: loginData.AccessToken,
 		User:  *userResponse,
 	}
+
+	fmt.Printf("DEBUG: Tipo do User na resposta: %T\n", loginResponse.User)
 
 	return c.JSON(http.StatusCreated, loginResponse)
 }

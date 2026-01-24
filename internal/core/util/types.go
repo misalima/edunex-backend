@@ -7,3 +7,8 @@ type LoginResponse struct {
 	RefreshToken string
 	User         *domain.User
 }
+
+type TokenClaims struct {
+	UserID string
+	Role   string
+}

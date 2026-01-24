@@ -36,3 +36,8 @@ func (req *CreateUserRequest) ValidateCreateUserRequest() error {
 	}
 	return nil
 }
+
+type UpdateRoleRequest struct {
+	UserID string `json:"user_id" validate:"required"`
+	Role   string `json:"role" validate:"required"`
+}

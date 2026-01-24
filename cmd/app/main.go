@@ -1,48 +1,75 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/misalima/edunex-backend/internal/api"
+	"github.com/misalima/edunex-backend/cmd/app/config"
 	"github.com/misalima/edunex-backend/internal/api/container"
+	"github.com/misalima/edunex-backend/internal/api/router"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
 )
 
 func main() {
 	if err := godotenv.Load(".env"); err != nil {
-		log.Println("Aviso: Arquivo .env não encontrado, usando variáveis de ambiente padrão")
+		log.Println("Warning: .env file not found. Using environment variables.")
 	}
 
-	// Build DSN from environment if not provided
-	dsn := os.Getenv("DATABASE_DSN")
-	if dsn == "" {
-		dsn = fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
-			os.Getenv("DB_USER"),
-			os.Getenv("DB_PASSWORD"),
-			os.Getenv("DB_HOST"),
-			os.Getenv("DB_PORT"),
-			os.Getenv("DB_NAME"),
-		)
-	}
+	cfg := config.Load()
 
-	// Initialize GORM DB using the postgres package (GORM initializer)
-	db, err := postgres.InitDB(dsn)
+	db, err := postgres.InitDB(cfg.DBURL)
 	if err != nil {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
 
-	// Initialize the API container with dependencies
-	ctn := container.NewContainer(db)
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("failed to get sql.DB from gorm.DB: %v", err)
+	}
+
 	e := echo.New()
-	api.RegisterRoutes(e, ctn)
+	setupMiddleware(e)
 
+	ctn := container.NewContainer(db)
+	router.RegisterRoutes(e, ctn)
+
+	log.Printf("Server starting at port %s", cfg.Port)
+
+	go func() {
+		if err := e.Start(":" + cfg.Port); err != nil && err != http.ErrServerClosed {
+			e.Logger.Fatal("error starting server:", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	log.Print("Starting graceful shutdown...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		e.Logger.Fatalf("error shutting down the server: %v", err)
+	}
+
+	if err := sqlDB.Close(); err != nil {
+		e.Logger.Errorf("error closing database connections: %v", err)
+	}
+
+	log.Print("Server shut down successfully")
+}
+
+func setupMiddleware(e *echo.Echo) {
 	e.Use(middleware.Logger())
-
-	log.Println("Servidor iniciado na porta 8080")
-	log.Fatal(e.Start(":8080"))
+	e.Use(middleware.Recover())
 }

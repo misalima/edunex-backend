@@ -37,7 +37,6 @@ func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domai
 		return nil, err
 	}
 	if existingUser != nil {
-
 		return nil, errors.New("email already in use")
 	}
 
@@ -46,6 +45,8 @@ func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domai
 		return nil, err
 	}
 	user.Password = string(hashedPassword)
+
+	user.Role = "coordinator"
 
 	id, err := s.userRepo.InsertUser(ctx, user)
 	if err != nil {
@@ -108,4 +109,11 @@ func (s *UserService) ListUsers(ctx context.Context) ([]*domain.User, error) {
 	}
 
 	return users, nil
+}
+
+func (s *UserService) UpdateUserRole(ctx context.Context, userID string, newRole string) error {
+	if newRole != "admin" && newRole != "coordinator" && newRole != "teacher" {
+		return errors.New("invalid role")
+	}
+	return s.userRepo.UpdateRole(ctx, userID, newRole)
 }

@@ -45,7 +45,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*util.
 		return nil, ErrInvalidCredentials
 	}
 
-	accessToken, err := s.jwtSvc.GenerateToken(user.ID.String())
+	accessToken, err := s.jwtSvc.GenerateToken(user.ID.String(), user.Role)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,12 @@ func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (st
 		return "", errors.New("invalid session")
 	}
 
-	newAccessToken, err := s.jwtSvc.GenerateToken(tokenData.UserID.String())
+	user, err := s.userRepo.GetUserByID(ctx, tokenData.UserID)
+	if err != nil || user == nil {
+		return "", errors.New("user not found")
+	}
+
+	newAccessToken, err := s.jwtSvc.GenerateToken(tokenData.UserID.String(), user.Role)
 	if err != nil {
 		return "", errors.New("error generating new access token")
 	}

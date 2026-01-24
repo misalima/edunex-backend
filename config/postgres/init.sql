@@ -2,6 +2,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Tipos ENUM
+CREATE TYPE role_enum AS ENUM ('admin', 'coordinator', 'principal');
 CREATE TYPE shift_enum AS ENUM ('morning', 'afternoon', 'evening');
 CREATE TYPE gender_enum AS ENUM ('male', 'female', 'other');
 CREATE TYPE attendance_status_enum AS ENUM ('present', 'absent', 'justified');
@@ -28,6 +29,7 @@ CREATE TABLE users (
                        name TEXT NOT NULL,
                        email TEXT UNIQUE NOT NULL,
                        password TEXT NOT NULL,
+                       role role_enum NOT NULL DEFAULT 'coordinator',
                        created_at TIMESTAMP DEFAULT now(),
                        updated_at TIMESTAMP DEFAULT now()
 );
@@ -234,3 +236,16 @@ CREATE TRIGGER update_schools_updated_at BEFORE UPDATE ON schools FOR EACH ROW E
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_academic_classes_updated_at BEFORE UPDATE ON academic_classes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_activities_updated_at BEFORE UPDATE ON activities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Insere o usuário admin (você mesmo)
+INSERT INTO users (id, name, email, password, role, created_at, updated_at)
+VALUES (
+           '8fbc2c20-70e6-4a27-87b6-c26b18d42551',
+           'Admin EduNex',
+           'admin@edunex.com.br',
+           '$2a$10$S3E7WwETLd7gh6JpgqdqVe2wTNurTYW9zxDryX/NM/DHmBAEoeIxS', -- Use bcrypt para gerar o hash
+           'admin',
+           NOW(),
+           NOW()
+       )
+    ON CONFLICT (email) DO NOTHING;

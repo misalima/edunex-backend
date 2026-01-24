@@ -12,6 +12,7 @@ import (
 )
 
 type Container struct {
+	JWTService    *security.JWTService
 	UserHandler   *handlers.UserHandler
 	HealthHandler *handlers.HealthHandler
 	AuthHandler   *handlers.AuthHandler
@@ -28,6 +29,7 @@ func NewContainer(db *gorm.DB) *Container {
 	authHandler := handlers.NewAuthHandler(authSvc, userSvc)
 
 	return &Container{
+		JWTService:    jwtSvc,
 		UserHandler:   userHandler,
 		HealthHandler: &handlers.HealthHandler{},
 		AuthHandler:   authHandler,

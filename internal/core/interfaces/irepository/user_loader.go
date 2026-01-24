@@ -13,4 +13,5 @@ type UserLoader interface {
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
 	ListUsers(ctx context.Context) ([]*domain.User, error)
+	UpdateRole(ctx context.Context, userID string, role string) error
 }

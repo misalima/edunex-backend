@@ -1,8 +1,9 @@
 package domain
 
 import (
-	"github.com/google/uuid"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type User struct {
@@ -10,6 +11,15 @@ type User struct {
 	Name     string
 	Email    string
 	Password string
+	Role     string
 	Created  time.Time
 	Updated  time.Time
+}
+
+func (u *User) IsAdmin() bool {
+	return u.Role == "admin"
+}
+
+func (u *User) IsPrincipal() bool {
+	return u.Role == "principal"
 }

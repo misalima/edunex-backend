@@ -106,3 +106,17 @@ func (u *UserHandler) UpdateUser(c echo.Context) error {
 
 	return c.NoContent(http.StatusNoContent)
 }
+
+func (h *UserHandler) UpdateRole(c echo.Context) error {
+	var req request.UpdateRoleRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request payload"})
+	}
+
+	err := h.svc.UpdateUserRole(c.Request().Context(), req.UserID, req.Role)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "user role updated successfully"})
+}

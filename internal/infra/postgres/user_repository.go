@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// ensure GormUserRepository implements the UserLoader interface
-var _ irepository.UserLoader = (*GormUserRepository)(nil)
+// ensure UserRepository implements the UserLoader interface
+var _ irepository.UserLoader = (*UserRepository)(nil)
 
 // userModel maps to the users table and contains GORM tags.
 // We keep domain.User free of GORM tags per hexagonal architecture.
@@ -21,6 +21,7 @@ type userModel struct {
 	Name      string    `gorm:"type:varchar(255);not null"`
 	Email     string    `gorm:"type:varchar(255);uniqueIndex;not null"`
 	Password  string    `gorm:"type:varchar(255);not null"`
+	Role      string    `gorm:"type:varchar(255);not null"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`
 }
@@ -39,6 +40,7 @@ func (m *userModel) toDomain() *domain.User {
 		Name:     m.Name,
 		Email:    m.Email,
 		Password: m.Password,
+		Role:     m.Role,
 		Created:  m.CreatedAt,
 		Updated:  m.UpdatedAt,
 	}
@@ -50,6 +52,7 @@ func fromDomain(u *domain.User) *userModel {
 		Name:     u.Name,
 		Email:    u.Email,
 		Password: u.Password,
+		Role:     u.Role,
 	}
 	if u.ID != uuid.Nil {
 		m.ID = u.ID
@@ -57,18 +60,18 @@ func fromDomain(u *domain.User) *userModel {
 	return m
 }
 
-// GormUserRepository is the GORM implementation of UserLoader
-type GormUserRepository struct {
+// UserRepository is the GORM implementation of UserLoader
+type UserRepository struct {
 	db *gorm.DB
 }
 
 // NewGormUserRepository creates a new repository using GORM DB
-func NewGormUserRepository(db *gorm.DB) *GormUserRepository {
-	return &GormUserRepository{db: db}
+func NewGormUserRepository(db *gorm.DB) *UserRepository {
+	return &UserRepository{db: db}
 }
 
 // InsertUser inserts a user and returns the created id as string
-func (r *GormUserRepository) InsertUser(ctx context.Context, user *domain.User) (string, error) {
+func (r *UserRepository) InsertUser(ctx context.Context, user *domain.User) (string, error) {
 	m := fromDomain(user)
 	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
 		return "", err
@@ -77,7 +80,7 @@ func (r *GormUserRepository) InsertUser(ctx context.Context, user *domain.User) 
 }
 
 // GetUserByID fetches a user by UUID
-func (r *GormUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
+func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	m := &userModel{}
 	if err := r.db.WithContext(ctx).First(m, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -89,7 +92,7 @@ func (r *GormUserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*do
 }
 
 // GetUserByEmail fetches a user by email
-func (r *GormUserRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
+func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	m := &userModel{}
 	if err := r.db.WithContext(ctx).First(m, "email = ?", email).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -101,7 +104,7 @@ func (r *GormUserRepository) GetUserByEmail(ctx context.Context, email string) (
 }
 
 // UpdateUser updates mutable fields of a user
-func (r *GormUserRepository) UpdateUser(ctx context.Context, user *domain.User) error {
+func (r *UserRepository) UpdateUser(ctx context.Context, user *domain.User) error {
 	m := fromDomain(user)
 	if m.ID == uuid.Nil {
 		return errors.New("user ID is required")
@@ -128,7 +131,7 @@ func (r *GormUserRepository) UpdateUser(ctx context.Context, user *domain.User) 
 }
 
 // ListUsers returns all users ordered by created_at
-func (r *GormUserRepository) ListUsers(ctx context.Context) ([]*domain.User, error) {
+func (r *UserRepository) ListUsers(ctx context.Context) ([]*domain.User, error) {
 	var models []userModel
 	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&models).Error; err != nil {
 		return nil, err
@@ -138,4 +141,8 @@ func (r *GormUserRepository) ListUsers(ctx context.Context) ([]*domain.User, err
 		users[i] = models[i].toDomain()
 	}
 	return users, nil
+}
+
+func (r *UserRepository) UpdateRole(ctx context.Context, userID string, role string) error {
+	return r.db.WithContext(ctx).Model(&domain.User{}).Where("id = ?", userID).Update("role", role).Error
 }
