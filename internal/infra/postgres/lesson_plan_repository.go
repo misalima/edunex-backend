@@ -14,7 +14,7 @@ import (
 	"gorm.io/gorm"
 )
 
-var _ irepository.LessonPlanRepo = (*LessonPlanRepository)(nil)
+var _ irepository.LessonPlanLoader = (*LessonPlanRepository)(nil)
 
 type lessonPlanModel struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
