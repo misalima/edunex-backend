@@ -7,23 +7,31 @@ import (
 )
 
 func RegisterRoutes(e *echo.Echo, c *container.Container) {
-	e.GET("/api/health", c.HealthHandler.HealthHandler)
-	e.POST("/api/sign-up", c.AuthHandler.SignUp)
-	e.POST("/api/login", c.AuthHandler.Login)
-	e.POST("/api/refresh", c.AuthHandler.Refresh)
+	// Rotas públicas
+	e.GET("/api/health", c.GetHealthHandler().HealthHandler)
+	e.POST("/api/sign-up", c.GetAuthHandler().SignUp)
+	e.POST("/api/login", c.GetAuthHandler().Login)
+	e.POST("/api/refresh", c.GetAuthHandler().Refresh)
 
 	apiGroup := e.Group("/api")
-	apiGroup.Use(middleware.AuthMiddleware(c.JWTService))
-	apiGroup.POST("/logout", c.AuthHandler.Logout)
+	apiGroup.Use(middleware.AuthMiddleware(c.GetJWTService()))
+	apiGroup.POST("/logout", c.GetAuthHandler().Logout)
 
+	// Users
 	userGroup := apiGroup.Group("/users")
-	userGroup.POST("", c.UserHandler.CreateUser)
-	userGroup.GET("", c.UserHandler.ListUsers)
-	userGroup.GET("/:id", c.UserHandler.GetUserByID)
-	userGroup.PUT("/:id", c.UserHandler.UpdateUser)
+	userGroup.POST("", c.GetUserHandler().CreateUser)
+	userGroup.GET("", c.GetUserHandler().ListUsers)
+	userGroup.GET("/:id", c.GetUserHandler().GetUserByID)
+	userGroup.PUT("/:id", c.GetUserHandler().UpdateUser)
 
+	// Admin
 	adminGroup := apiGroup.Group("/admin")
 	adminGroup.Use(middleware.AdminOnly)
-	adminGroup.PATCH("/users/role", c.UserHandler.UpdateRole)
+	adminGroup.PATCH("/users/role", c.GetUserHandler().UpdateRole)
 
+	// Lesson Plans
+	lPGroup := apiGroup.Group("/lesson-plans")
+	lPGroup.POST("", c.GetLessonPlanHandler().Create)
+	lPGroup.GET("", c.GetLessonPlanHandler().List)
+	lPGroup.GET("/:id", c.GetLessonPlanHandler().GetByID)
 }

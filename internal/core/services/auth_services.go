@@ -28,6 +28,8 @@ func NewAuthService(authRepo irepository.AuthLoader, userRepo irepository.UserLo
 	}
 }
 
+var _ iservice.AuthManager = (*AuthService)(nil)
+
 func (s *AuthService) Login(ctx context.Context, email, password string) (*util.LoginResponse, error) {
 	user, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {

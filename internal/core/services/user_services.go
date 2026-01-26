@@ -18,6 +18,8 @@ type UserService struct {
 	userRepo irepository.UserLoader
 }
 
+var _ iservice.UserManager = (*UserService)(nil)
+
 func NewUserService(userRepo irepository.UserLoader) *UserService {
 	return &UserService{
 		userRepo: userRepo,
