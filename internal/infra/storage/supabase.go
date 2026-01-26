@@ -45,7 +45,7 @@ func NewClientFromEnv() *Client {
 }
 
 func (c *Client) Upload(ctx context.Context, objectPath string, reader io.Reader, contentType string) (string, error) {
-	encodedPath := url.PathEscape(objectPath)
+	encodedPath := strings.ReplaceAll(url.PathEscape(objectPath), "%2F", "/")
 	uploadURL := fmt.Sprintf("%s/storage/v1/object/%s/%s", c.baseURL, c.bucket, encodedPath)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uploadURL, reader)
@@ -74,7 +74,7 @@ func (c *Client) Upload(ctx context.Context, objectPath string, reader io.Reader
 		return "", domain_errors.WrapUnexpectedMsg(err, "storage upload error")
 	}
 
-	signedURL, err := c.SignURL(ctx, objectPath, 3600) // 1 hora de validade
+	signedURL, err := c.SignURL(ctx, objectPath, 3600)
 	if err != nil {
 		return "", err
 	}
@@ -82,7 +82,7 @@ func (c *Client) Upload(ctx context.Context, objectPath string, reader io.Reader
 }
 
 func (c *Client) Delete(ctx context.Context, objectPath string) error {
-	encodedPath := url.PathEscape(objectPath)
+	encodedPath := strings.ReplaceAll(url.PathEscape(objectPath), "%2F", "/")
 	deleteURL := fmt.Sprintf("%s/storage/v1/object/%s/%s", c.baseURL, c.bucket, encodedPath)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, deleteURL, nil)
@@ -110,7 +110,7 @@ func (c *Client) Delete(ctx context.Context, objectPath string) error {
 }
 
 func (c *Client) SignURL(ctx context.Context, objectPath string, expiresInSeconds int) (string, error) {
-	encodedPath := url.PathEscape(objectPath)
+	encodedPath := strings.ReplaceAll(url.PathEscape(objectPath), "%2F", "/")
 	signURL := fmt.Sprintf("%s/storage/v1/object/sign/%s/%s", c.baseURL, c.bucket, encodedPath)
 
 	payload := map[string]int{"expiresIn": expiresInSeconds}
@@ -146,11 +146,28 @@ func (c *Client) SignURL(ctx context.Context, objectPath string, expiresInSecond
 	}
 
 	if v, ok := m["signedURL"].(string); ok && v != "" {
-		return v, nil
+		return c.makeFullURL(v), nil
 	}
 	if v, ok := m["signedUrl"].(string); ok && v != "" {
-		return v, nil
+		return c.makeFullURL(v), nil
 	}
 
 	return "", domain_errors.NewUnexpectedMsg("signed url not found in response")
+}
+
+func (c *Client) makeFullURL(signed string) string {
+	s := strings.TrimSpace(signed)
+	if s == "" {
+		return s
+	}
+	if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") {
+		return s
+	}
+	if !strings.HasPrefix(s, "/") {
+		s = "/" + s
+	}
+	if strings.HasPrefix(s, "/object/") {
+		s = "/storage/v1" + s
+	}
+	return c.baseURL + s
 }
