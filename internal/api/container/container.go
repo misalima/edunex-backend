@@ -2,45 +2,121 @@ package container
 
 import (
 	"os"
+	"sync"
 
 	"github.com/labstack/gommon/log"
 	"github.com/misalima/edunex-backend/internal/api/handlers"
 	"github.com/misalima/edunex-backend/internal/core/services"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
 	"github.com/misalima/edunex-backend/internal/infra/security"
+	supabase "github.com/misalima/edunex-backend/internal/infra/storage"
 	"gorm.io/gorm"
 )
 
+// Container centraliza a criação (lazy) e cache das dependências da aplicação.
+// Implementado com sync.Once para inicialização única e thread-safe.
 type Container struct {
-	JWTService    *security.JWTService
-	UserHandler   *handlers.UserHandler
-	HealthHandler *handlers.HealthHandler
-	AuthHandler   *handlers.AuthHandler
+	db *gorm.DB
+
+	jwtOnce    sync.Once
+	jwtService *security.JWTService
+
+	storageOnce   sync.Once
+	storageClient *supabase.Client
+
+	userOnce    sync.Once
+	userService *services.UserService
+	userHandler *handlers.UserHandler
+
+	authOnce    sync.Once
+	authHandler *handlers.AuthHandler
+
+	healthOnce    sync.Once
+	healthHandler *handlers.HealthHandler
+
+	lessonPlanOnce    sync.Once
+	lessonPlanHandler *handlers.LessonPlanHandler
 }
 
+// NewContainer cria um container leve que receberá o DB e criará recursos sob demanda.
 func NewContainer(db *gorm.DB) *Container {
-	userRepo := postgres.NewGormUserRepository(db)
-	userSvc := services.NewUserService(userRepo)
-	userHandler := handlers.NewUserHandler(userSvc)
-
-	authRepo := postgres.NewGormAuthRepository(db)
-	jwtSvc := security.NewJWTService(getJWTSecret())
-	authSvc := services.NewAuthService(authRepo, userRepo, jwtSvc)
-	authHandler := handlers.NewAuthHandler(authSvc, userSvc)
-
-	return &Container{
-		JWTService:    jwtSvc,
-		UserHandler:   userHandler,
-		HealthHandler: &handlers.HealthHandler{},
-		AuthHandler:   authHandler,
-	}
+	return &Container{db: db}
 }
 
-func getJWTSecret() string {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		log.Info("JWT secret not found, using default secret")
-		secret = "secret"
-	}
-	return secret
+// GetJWTService inicializa (uma vez) e retorna o JWTService.
+func (c *Container) GetJWTService() *security.JWTService {
+	c.jwtOnce.Do(func() {
+		secret := os.Getenv("JWT_SECRET")
+		if secret == "" {
+			log.Info("JWT secret not found, using default secret")
+			secret = "default_secret_change_me"
+		}
+		c.jwtService = security.NewJWTService(secret)
+	})
+	return c.jwtService
+}
+
+// GetStorageClient inicializa (uma vez) e retorna o cliente Supabase.
+func (c *Container) GetStorageClient() *supabase.Client {
+	c.storageOnce.Do(func() {
+		url := os.Getenv("SUPABASE_URL")
+		key := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
+		bucket := os.Getenv("SUPABASE_BUCKET")
+		if url == "" || key == "" || bucket == "" {
+			log.Fatal("supabase configuration is missing (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET)")
+		}
+		c.storageClient = supabase.NewClient(url, key, bucket)
+	})
+	return c.storageClient
+}
+
+// GetUserHandler inicializa (uma vez) o UserService e o UserHandler e retorna o handler.
+func (c *Container) GetUserHandler() *handlers.UserHandler {
+	c.userOnce.Do(func() {
+		userRepo := postgres.NewGormUserRepository(c.db)
+		c.userService = services.NewUserService(userRepo)
+		c.userHandler = handlers.NewUserHandler(c.userService)
+	})
+	return c.userHandler
+}
+
+// GetAuthHandler inicializa (uma vez) o AuthHandler com suas dependências.
+func (c *Container) GetAuthHandler() *handlers.AuthHandler {
+	c.authOnce.Do(func() {
+		// Cria repo(s) necessários
+		authRepo := postgres.NewGormAuthRepository(c.db)
+		userRepoForAuth := postgres.NewGormUserRepository(c.db)
+
+		// Garante JWT service
+		jwt := c.GetJWTService()
+
+		// Cria AuthService
+		authSvc := services.NewAuthService(authRepo, userRepoForAuth, jwt)
+
+		// Garante userService/handler inicializados (GetUserHandler usa userOnce)
+		c.GetUserHandler()
+
+		// Usa userService existente para criar o handler
+		c.authHandler = handlers.NewAuthHandler(authSvc, c.userService)
+	})
+	return c.authHandler
+}
+
+// GetHealthHandler inicializa e retorna o HealthHandler (barato).
+func (c *Container) GetHealthHandler() *handlers.HealthHandler {
+	c.healthOnce.Do(func() {
+		c.healthHandler = &handlers.HealthHandler{}
+	})
+	return c.healthHandler
+}
+
+// GetLessonPlanHandler inicializa (uma vez) o LessonPlanService e o handler.
+func (c *Container) GetLessonPlanHandler() *handlers.LessonPlanHandler {
+	c.lessonPlanOnce.Do(func() {
+		lpRepo := postgres.NewLessonPlanRepository(c.db)
+		storage := c.GetStorageClient()
+		lpSvc := services.NewLessonPlanService(lpRepo, storage)
+		c.lessonPlanHandler = handlers.NewLessonPlanHandler(lpSvc)
+	})
+	return c.lessonPlanHandler
 }

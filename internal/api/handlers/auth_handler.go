@@ -30,7 +30,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 
 	loginData, err := h.authService.Login(c.Request().Context(), req.Email, req.Password)
 	if err != nil {
-		return response.JSONError(c, err)
+		return handleDomainError(c, err)
 	}
 
 	cookie := &http.Cookie{
@@ -68,7 +68,7 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 
 	createdUser, err := h.userService.CreateUser(c.Request().Context(), user)
 	if err != nil {
-		return response.JSONError(c, err)
+		return handleDomainError(c, err)
 	}
 
 	if createdUser == nil {
@@ -77,7 +77,7 @@ func (h *AuthHandler) SignUp(c echo.Context) error {
 
 	loginData, err := h.authService.Login(c.Request().Context(), createdUser.Email, req.Password)
 	if err != nil {
-		return response.JSONError(c, err)
+		return handleDomainError(c, err)
 	}
 
 	cookie := &http.Cookie{
@@ -108,7 +108,7 @@ func (h *AuthHandler) Refresh(c echo.Context) error {
 
 	newAccessToken, err := h.authService.RefreshToken(c.Request().Context(), cookie.Value)
 	if err != nil {
-		return response.JSONError(c, err)
+		return handleDomainError(c, err)
 	}
 
 	resp := &response.RefreshTokenResponse{

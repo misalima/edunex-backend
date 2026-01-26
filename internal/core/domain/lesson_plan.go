@@ -13,5 +13,4 @@ type LessonPlan struct {
 	FilePath string
 	Status   string
 	Created  time.Time
-	Updated  time.Time
 }

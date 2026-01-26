@@ -23,7 +23,6 @@ type lessonPlanModel struct {
 	FilePath  string    `gorm:"type:text;not null"`
 	Status    string    `gorm:"type:varchar(50);not null;default:'pending'"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
-	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`
 }
 
 func (lessonPlanModel) TableName() string {
@@ -41,7 +40,6 @@ func (m *lessonPlanModel) toDomain() *domain.LessonPlan {
 		FilePath: m.FilePath,
 		Status:   m.Status,
 		Created:  m.CreatedAt,
-		Updated:  m.UpdatedAt,
 	}
 }
 
@@ -60,9 +58,6 @@ func fromDomainLessonPlan(lp *domain.LessonPlan) *lessonPlanModel {
 	}
 	if !lp.Created.IsZero() {
 		m.CreatedAt = lp.Created
-	}
-	if !lp.Updated.IsZero() {
-		m.UpdatedAt = lp.Updated
 	}
 	return m
 }
