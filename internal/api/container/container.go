@@ -38,12 +38,10 @@ type Container struct {
 	lessonPlanHandler *handlers.LessonPlanHandler
 }
 
-// NewContainer cria um container leve que receberá o DB e criará recursos sob demanda.
 func NewContainer(db *gorm.DB) *Container {
 	return &Container{db: db}
 }
 
-// GetJWTService inicializa (uma vez) e retorna o JWTService.
 func (c *Container) GetJWTService() *security.JWTService {
 	c.jwtOnce.Do(func() {
 		secret := os.Getenv("JWT_SECRET")
@@ -56,7 +54,6 @@ func (c *Container) GetJWTService() *security.JWTService {
 	return c.jwtService
 }
 
-// GetStorageClient inicializa (uma vez) e retorna o cliente Supabase.
 func (c *Container) GetStorageClient() *supabase.Client {
 	c.storageOnce.Do(func() {
 		url := os.Getenv("SUPABASE_URL")
@@ -70,7 +67,6 @@ func (c *Container) GetStorageClient() *supabase.Client {
 	return c.storageClient
 }
 
-// GetUserHandler inicializa (uma vez) o UserService e o UserHandler e retorna o handler.
 func (c *Container) GetUserHandler() *handlers.UserHandler {
 	c.userOnce.Do(func() {
 		userRepo := postgres.NewGormUserRepository(c.db)
@@ -80,29 +76,22 @@ func (c *Container) GetUserHandler() *handlers.UserHandler {
 	return c.userHandler
 }
 
-// GetAuthHandler inicializa (uma vez) o AuthHandler com suas dependências.
 func (c *Container) GetAuthHandler() *handlers.AuthHandler {
 	c.authOnce.Do(func() {
-		// Cria repo(s) necessários
 		authRepo := postgres.NewGormAuthRepository(c.db)
 		userRepoForAuth := postgres.NewGormUserRepository(c.db)
 
-		// Garante JWT service
 		jwt := c.GetJWTService()
 
-		// Cria AuthService
 		authSvc := services.NewAuthService(authRepo, userRepoForAuth, jwt)
 
-		// Garante userService/handler inicializados (GetUserHandler usa userOnce)
 		c.GetUserHandler()
 
-		// Usa userService existente para criar o handler
 		c.authHandler = handlers.NewAuthHandler(authSvc, c.userService)
 	})
 	return c.authHandler
 }
 
-// GetHealthHandler inicializa e retorna o HealthHandler (barato).
 func (c *Container) GetHealthHandler() *handlers.HealthHandler {
 	c.healthOnce.Do(func() {
 		c.healthHandler = &handlers.HealthHandler{}
@@ -110,7 +99,6 @@ func (c *Container) GetHealthHandler() *handlers.HealthHandler {
 	return c.healthHandler
 }
 
-// GetLessonPlanHandler inicializa (uma vez) o LessonPlanService e o handler.
 func (c *Container) GetLessonPlanHandler() *handlers.LessonPlanHandler {
 	c.lessonPlanOnce.Do(func() {
 		lpRepo := postgres.NewLessonPlanRepository(c.db)
