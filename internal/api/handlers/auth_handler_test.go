@@ -82,8 +82,10 @@ var _ = Describe("AuthHandler", func() {
 				Expect(recorder.Code).To(Equal(http.StatusOK))
 
 				var resp map[string]interface{}
-				json.Unmarshal(recorder.Body.Bytes(), &resp)
-				Expect(resp["token"]).To(Equal("access-token-123"))
+				if err := json.Unmarshal(recorder.Body.Bytes(), &resp)
+	if err != nil {
+		t.Errorf("Error unmarshalling JSON: %v", err)
+}				Expect(resp["token"]).To(Equal("access-token-123"))
 				Expect(resp["user"]).ToNot(BeNil())
 
 				// Check cookie
@@ -110,8 +112,10 @@ var _ = Describe("AuthHandler", func() {
 				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
 
 				var resp map[string]interface{}
-				json.Unmarshal(recorder.Body.Bytes(), &resp)
-				Expect(resp["error"]).To(Equal("invalid request payload"))
+				if err := json.Unmarshal(recorder.Body.Bytes(), &resp)
+	if err != nil {
+		t.Errorf("Error unmarshalling JSON: %v", err)
+}				Expect(resp["error"]).To(Equal("invalid request payload"))
 			})
 		})
 
@@ -204,8 +208,10 @@ var _ = Describe("AuthHandler", func() {
 				Expect(recorder.Code).To(Equal(http.StatusOK))
 
 				var resp map[string]interface{}
-				json.Unmarshal(recorder.Body.Bytes(), &resp)
-				Expect(resp["token"]).To(Equal("new-access-token-789"))
+				if err := json.Unmarshal(recorder.Body.Bytes(), &resp)
+	if err != nil {
+		t.Errorf("Error unmarshalling JSON: %v", err)
+}				Expect(resp["token"]).To(Equal("new-access-token-789"))
 			})
 		})
 
