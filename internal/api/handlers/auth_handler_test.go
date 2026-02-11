@@ -3,13 +3,13 @@ package handlers_test
 import (
 	"bytes"
 	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"fmt"
+	"net/http"
+	"net/http/httptest"
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/api/handlers"
