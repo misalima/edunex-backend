@@ -94,30 +94,30 @@ func TestAuthService_Login_Success(t *testing.T) {
 	email := "test@example.com"
 	password := "password123"
 	hashedPassword := "$2a$10$FW69DWtPJ.5vRnq1EeUMUuPVf1FI17XhXGOW94qlNJ1P.gK3bdB3." // bcrypt hash válido
-  
+
 	user := &domain.User{
 		ID:       userID,
 		Email:    email,
 		Password: hashedPassword,
 		Role:     "admin",
 	}
-  
+
 	authRepo := new(mockAuthRepo)
 	userRepo := new(mockUserRepo)
 	jwtSvc := new(mockJWTService)
-  
+
 	authService := services.NewAuthService(authRepo, userRepo, jwtSvc)
-  
+
 	// Expectations
 	userRepo.On("GetUserByEmail", ctx, email).Return(user, nil)
 	jwtSvc.On("GenerateToken", userID.String(), "admin").Return("access-token", nil)
 	authRepo.On("CreateRefreshToken", ctx, userID, mock.Anything, mock.Anything).Return(&domain.RefreshToken{
 		Token: "refresh-token",
 	}, nil)
-  
+
 	// Execute
 	result, err := authService.Login(ctx, email, password)
-  
+
 	// Verify
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
@@ -125,7 +125,7 @@ func TestAuthService_Login_Success(t *testing.T) {
 	assert.Equal(t, "refresh-token", result.RefreshToken)
 	assert.Equal(t, userID, result.User.ID)
 	assert.Equal(t, "", result.User.Password) // Password should be cleared
-  
+
 	authRepo.AssertExpectations(t)
 	userRepo.AssertExpectations(t)
 	jwtSvc.AssertExpectations(t)
@@ -136,24 +136,24 @@ func TestAuthService_Login_UserNotFound(t *testing.T) {
 	ctx := context.Background()
 	email := "nonexistent@example.com"
 	password := "password123"
-  
+
 	authRepo := new(mockAuthRepo)
 	userRepo := new(mockUserRepo)
 	jwtSvc := new(mockJWTService)
-  
+
 	authService := services.NewAuthService(authRepo, userRepo, jwtSvc)
-  
+
 	// Expectations
 	userRepo.On("GetUserByEmail", ctx, email).Return((*domain.User)(nil), domain_errors.ErrUserNotFound)
-  
+
 	// Execute
 	result, err := authService.Login(ctx, email, password)
-  
+
 	// Verify
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, domain_errors.ErrUserNotFound, err)
-  
+
 	userRepo.AssertExpectations(t)
 }
 

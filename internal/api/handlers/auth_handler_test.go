@@ -8,27 +8,27 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
+	"github.com/labstack/echo/v4"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/labstack/echo/v4"
 
+	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/api/handlers"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/request"
 	"github.com/misalima/edunex-backend/internal/api/handlers/mocks"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/core/util"
-	"github.com/google/uuid"
 )
 
 var _ = Describe("AuthHandler", func() {
 	var (
-		ctrl           *gomock.Controller
-		mockAuthMgr    *mocks.MockAuthManager
-		mockUserMgr    *mocks.MockUserManager
-		authHandler    *handlers.AuthHandler
-		echoInstance   *echo.Echo
-		recorder       *httptest.ResponseRecorder
+		ctrl         *gomock.Controller
+		mockAuthMgr  *mocks.MockAuthManager
+		mockUserMgr  *mocks.MockUserManager
+		authHandler  *handlers.AuthHandler
+		echoInstance *echo.Echo
+		recorder     *httptest.ResponseRecorder
 	)
 
 	BeforeEach(func() {
@@ -58,10 +58,10 @@ var _ = Describe("AuthHandler", func() {
 				echoCtx := echoInstance.NewContext(req, recorder)
 
 				expectedUser := &domain.User{
-					ID:       uuid.New(),
-					Name:     "Test User",
-					Email:    "test@example.com",
-					Role:     "teacher",
+					ID:    uuid.New(),
+					Name:  "Test User",
+					Email: "test@example.com",
+					Role:  "teacher",
 				}
 
 				expectedLoginData := &util.LoginResponse{
