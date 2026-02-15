@@ -63,7 +63,7 @@
 				
 				<option value="file3">github.com/misalima/edunex-backend/internal/api/container/container.go (0.0%)</option>
 				
-				<option value="file4">github.com/misalima/edunex-backend/internal/api/handlers/auth_handler.go (55.6%)</option>
+				<option value="file4">github.com/misalima/edunex-backend/internal/api/handlers/auth_handler.go (22.2%)</option>
 				
 				<option value="file5">github.com/misalima/edunex-backend/internal/api/handlers/dto/request/lesson_plan.go (0.0%)</option>
 				
@@ -449,12 +449,12 @@ func NewAuthHandler(authService iservice.AuthManager, userService iservice.UserM
 
 func (h *AuthHandler) Login(c echo.Context) error <span class="cov8" title="1">{
         var req request.LoginRequest
-        if err := c.Bind(&amp;req); err != nil </span><span class="cov8" title="1">{
+        if err := c.Bind(&amp;req); err != nil </span><span class="cov0" title="0">{
                 return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request payload"})
         }</span>
 
         <span class="cov8" title="1">loginData, err := h.authService.Login(c.Request().Context(), req.Email, req.Password)
-        if err != nil </span><span class="cov8" title="1">{
+        if err != nil </span><span class="cov0" title="0">{
                 return handleDomainError(c, err)
         }</span>
 
@@ -525,31 +525,31 @@ func (h *AuthHandler) SignUp(c echo.Context) error <span class="cov0" title="0">
         return c.JSON(http.StatusCreated, loginResponse)</span>
 }
 
-func (h *AuthHandler) Refresh(c echo.Context) error <span class="cov8" title="1">{
+func (h *AuthHandler) Refresh(c echo.Context) error <span class="cov0" title="0">{
         cookie, err := c.Cookie("refresh_token")
-        if err != nil </span><span class="cov8" title="1">{
+        if err != nil </span><span class="cov0" title="0">{
                 return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid session"})
         }</span>
 
-        <span class="cov8" title="1">newAccessToken, err := h.authService.RefreshToken(c.Request().Context(), cookie.Value)
+        <span class="cov0" title="0">newAccessToken, err := h.authService.RefreshToken(c.Request().Context(), cookie.Value)
         if err != nil </span><span class="cov0" title="0">{
                 return handleDomainError(c, err)
         }</span>
 
-        <span class="cov8" title="1">resp := &amp;response.RefreshTokenResponse{
+        <span class="cov0" title="0">resp := &amp;response.RefreshTokenResponse{
                 Token: newAccessToken,
         }
 
         return c.JSON(http.StatusOK, resp)</span>
 }
 
-func (h *AuthHandler) Logout(c echo.Context) error <span class="cov8" title="1">{
+func (h *AuthHandler) Logout(c echo.Context) error <span class="cov0" title="0">{
         cookie, err := c.Cookie("refresh_token")
-        if err == nil </span><span class="cov8" title="1">{
+        if err == nil </span><span class="cov0" title="0">{
                 _ = h.authService.Logout(c.Request().Context(), cookie.Value)
         }</span>
 
-        <span class="cov8" title="1">expiredCookie := &amp;http.Cookie{
+        <span class="cov0" title="0">expiredCookie := &amp;http.Cookie{
                 Name:     "refresh_token",
                 Value:    "",
                 Path:     "/",
@@ -851,9 +851,13 @@ func (h *LessonPlanHandler) Create(c echo.Context) error <span class="cov0" titl
         if err != nil </span><span class="cov0" title="0">{
                 return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to open file"})
         }</span>
-        <span class="cov0" title="0">defer file.Close()
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{
+                if err := file.Close(); err != nil </span><span class="cov0" title="0">{
+                        logger.Error("failed to close file", err)
+                }</span>
+        }()
 
-        userID, err := getUserIDFromContext(c)
+        <span class="cov0" title="0">userID, err := getUserIDFromContext(c)
         if err != nil </span><span class="cov0" title="0">{
                 return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
         }</span>
@@ -2589,9 +2593,13 @@ func (c *Client) Upload(ctx context.Context, objectPath string, reader io.Reader
                 logger.Log.Error("supabase upload: request failed", zap.Error(err), zap.String("path", objectPath))
                 return "", domain_errors.WrapUnexpectedMsg(err, "failed to upload file to storage")
         }</span>
-        <span class="cov0" title="0">defer res.Body.Close()
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{
+                if err := res.Body.Close(); err != nil </span><span class="cov0" title="0">{
+                        logger.Log.Error("failed to close response body", zap.Error(err))
+                }</span>
+        }()
 
-        if res.StatusCode &gt;= 400 </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">if res.StatusCode &gt;= 400 </span><span class="cov0" title="0">{
                 body, _ := io.ReadAll(res.Body)
                 err := fmt.Errorf("storage upload returned status %d: %s", res.StatusCode, string(body))
                 logger.Log.Error("supabase upload: error response", zap.Error(err), zap.Int("status", res.StatusCode), zap.String("path", objectPath))
@@ -2621,9 +2629,13 @@ func (c *Client) Delete(ctx context.Context, objectPath string) error <span clas
                 logger.Log.Error("supabase delete: request failed", zap.Error(err), zap.String("path", objectPath))
                 return domain_errors.WrapUnexpectedMsg(err, "failed to delete object from storage")
         }</span>
-        <span class="cov0" title="0">defer res.Body.Close()
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{
+                if err := res.Body.Close(); err != nil </span><span class="cov0" title="0">{
+                        logger.Log.Error("failed to close response body", zap.Error(err))
+                }</span>
+        }()
 
-        if res.StatusCode &gt;= 400 </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">if res.StatusCode &gt;= 400 </span><span class="cov0" title="0">{
                 body, _ := io.ReadAll(res.Body)
                 err := fmt.Errorf("storage delete returned status %d: %s", res.StatusCode, string(body))
                 logger.Log.Error("supabase delete: error response", zap.Error(err), zap.Int("status", res.StatusCode), zap.String("path", objectPath))
@@ -2654,9 +2666,13 @@ func (c *Client) SignURL(ctx context.Context, objectPath string, expiresInSecond
                 logger.Log.Error("supabase sign: request failed", zap.Error(err), zap.String("path", objectPath))
                 return "", domain_errors.WrapUnexpectedMsg(err, "failed to request signed url")
         }</span>
-        <span class="cov0" title="0">defer res.Body.Close()
+        <span class="cov0" title="0">defer func() </span><span class="cov0" title="0">{
+                if err := res.Body.Close(); err != nil </span><span class="cov0" title="0">{
+                        logger.Log.Error("failed to close response body", zap.Error(err))
+                }</span>
+        }()
 
-        if res.StatusCode &gt;= 400 </span><span class="cov0" title="0">{
+        <span class="cov0" title="0">if res.StatusCode &gt;= 400 </span><span class="cov0" title="0">{
                 body, _ := io.ReadAll(res.Body)
                 err := fmt.Errorf("storage sign returned status %d: %s", res.StatusCode, string(body))
                 logger.Log.Error("supabase sign: error response", zap.Error(err), zap.Int("status", res.StatusCode), zap.String("path", objectPath))

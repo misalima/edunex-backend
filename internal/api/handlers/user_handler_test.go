@@ -82,7 +82,8 @@ var _ = Describe("UserHandler", func() {
 				Expect(recorder.Code).To(Equal(http.StatusCreated))
 
 				var resp map[string]interface{}
-				json.Unmarshal(recorder.Body.Bytes(), &resp)
+				err = json.Unmarshal(recorder.Body.Bytes(), &resp)
+				Expect(err).To(BeNil())
 				Expect(resp["name"]).To(Equal("Test User"))
 				Expect(resp["email"]).To(Equal("test@example.com"))
 				Expect(resp["role"]).To(Equal("teacher"))
@@ -157,7 +158,8 @@ var _ = Describe("UserHandler", func() {
 				Expect(recorder.Code).To(Equal(http.StatusOK))
 
 				var resp map[string]interface{}
-				json.Unmarshal(recorder.Body.Bytes(), &resp)
+				err = json.Unmarshal(recorder.Body.Bytes(), &resp)
+				Expect(err).To(BeNil())
 				Expect(resp["id"]).To(Equal(userID.String()))
 				Expect(resp["name"]).To(Equal("Test User"))
 				Expect(resp["email"]).To(Equal("test@example.com"))
@@ -237,7 +239,8 @@ var _ = Describe("UserHandler", func() {
 			Expect(recorder.Code).To(Equal(http.StatusOK))
 
 			var resp []interface{}
-			json.Unmarshal(recorder.Body.Bytes(), &resp)
+			err = json.Unmarshal(recorder.Body.Bytes(), &resp)
+			Expect(err).To(BeNil())
 			Expect(resp).To(HaveLen(2))
 			Expect(resp[0].(map[string]interface{})["name"]).To(Equal("User 1"))
 			Expect(resp[1].(map[string]interface{})["name"]).To(Equal("User 2"))

@@ -65,7 +65,11 @@ func (c *Client) Upload(ctx context.Context, objectPath string, reader io.Reader
 		logger.Log.Error("supabase upload: request failed", zap.Error(err), zap.String("path", objectPath))
 		return "", domain_errors.WrapUnexpectedMsg(err, "failed to upload file to storage")
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logger.Log.Error("failed to close response body", zap.Error(err))
+		}
+	}()
 
 	if res.StatusCode >= 400 {
 		body, _ := io.ReadAll(res.Body)
@@ -97,7 +101,11 @@ func (c *Client) Delete(ctx context.Context, objectPath string) error {
 		logger.Log.Error("supabase delete: request failed", zap.Error(err), zap.String("path", objectPath))
 		return domain_errors.WrapUnexpectedMsg(err, "failed to delete object from storage")
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logger.Log.Error("failed to close response body", zap.Error(err))
+		}
+	}()
 
 	if res.StatusCode >= 400 {
 		body, _ := io.ReadAll(res.Body)
@@ -130,7 +138,11 @@ func (c *Client) SignURL(ctx context.Context, objectPath string, expiresInSecond
 		logger.Log.Error("supabase sign: request failed", zap.Error(err), zap.String("path", objectPath))
 		return "", domain_errors.WrapUnexpectedMsg(err, "failed to request signed url")
 	}
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			logger.Log.Error("failed to close response body", zap.Error(err))
+		}
+	}()
 
 	if res.StatusCode >= 400 {
 		body, _ := io.ReadAll(res.Body)
