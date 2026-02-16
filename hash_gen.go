@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	password := "MyPassword123" // Troque pela senha que você quer
+	password := "EdunexAdmin2026@@" // Troque pela senha que você quer
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
 	fmt.Println(string(hash))
 }

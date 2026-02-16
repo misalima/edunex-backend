@@ -236,16 +236,3 @@ CREATE TRIGGER update_schools_updated_at BEFORE UPDATE ON schools FOR EACH ROW E
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_academic_classes_updated_at BEFORE UPDATE ON academic_classes FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_activities_updated_at BEFORE UPDATE ON activities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Insere o usuário admin (você mesmo)
-INSERT INTO users (id, name, email, password, role, created_at, updated_at)
-VALUES (
-           '8fbc2c20-70e6-4a27-87b6-c26b18d42551',
-           'Admin EduNex',
-           'admin@edunex.com.br',
-           '$2a$10$S3E7WwETLd7gh6JpgqdqVe2wTNurTYW9zxDryX/NM/DHmBAEoeIxS', -- Use bcrypt para gerar o hash
-           'admin',
-           NOW(),
-           NOW()
-       )
-    ON CONFLICT (email) DO NOTHING;
