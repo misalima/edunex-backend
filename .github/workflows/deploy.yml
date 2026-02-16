@@ -30,4 +30,4 @@ jobs:
             echo "SUPABASE_JWT_SECRET=${{ secrets.SUPABASE_JWT_SECRET }}" >> .env
             echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
             
-            docker-compose up -d --build
+            docker compose up -d --build
