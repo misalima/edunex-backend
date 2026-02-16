@@ -44,7 +44,11 @@ func (h *LessonPlanHandler) Create(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to open file"})
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			logger.Error("failed to close file", err)
+		}
+	}()
 
 	userID, err := getUserIDFromContext(c)
 	if err != nil {
