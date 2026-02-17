@@ -1,0 +1,15 @@
+### Summary
+
+This PR introduces the following improvements for the EDUNEX backend:
+1. Rewrote authentication tests to follow the Ginkgo BDD pattern (`Describe`, `It`).
+2. Centralized mocks in a dedicated test package (`services_test`) for improved separation of concerns.
+3. Updated test directories for better test organization and clarity.
+
+### Next Steps
+
+- Review and confirm adherence to project standards.
+- Consider expanding tests for `lesson_plan_services` and `user_services`, which have 0% coverage.
+
+---
+
+🔥 Let's elevate EDUNEX's test coverage and maintainability!
