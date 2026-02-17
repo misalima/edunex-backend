@@ -46,7 +46,7 @@ go run cmd/app/main.go
 
 ## Contato
 
-Para dúvidas ou contribuições, entre em contato: seu-email@exemplo.com
+Para dúvidas ou contribuições, entre em contato: misael.alisson14@gmail.com
 
 ---
 
