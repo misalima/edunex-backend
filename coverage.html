@@ -99,7 +99,7 @@
 				
 				<option value="file21">github.com/misalima/edunex-backend/internal/core/domain_errors/helpers.go (0.0%)</option>
 				
-				<option value="file22">github.com/misalima/edunex-backend/internal/core/services/auth_services.go (0.0%)</option>
+				<option value="file22">github.com/misalima/edunex-backend/internal/core/services/auth_services.go (82.5%)</option>
 				
 				<option value="file23">github.com/misalima/edunex-backend/internal/core/services/lesson_plan_services.go (0.0%)</option>
 				
@@ -305,7 +305,7 @@ import (
 )
 
 func main() <span class="cov0" title="0">{
-        password := "MyPassword123" // Troque pela senha que você quer
+        password := "EdunexAdmin2026@@" // Troque pela senha que você quer
         hash, _ := bcrypt.GenerateFromPassword([]byte(password), 10)
         fmt.Println(string(hash))
 }</span>
@@ -1595,7 +1595,7 @@ type AuthService struct {
         jwtSvc   iservice.JWTManager
 }
 
-func NewAuthService(authRepo irepository.AuthLoader, userRepo irepository.UserLoader, jwtService iservice.JWTManager) *AuthService <span class="cov0" title="0">{
+func NewAuthService(authRepo irepository.AuthLoader, userRepo irepository.UserLoader, jwtService iservice.JWTManager) *AuthService <span class="cov8" title="1">{
         return &amp;AuthService{
                 authRepo: authRepo,
                 userRepo: userRepo,
@@ -1605,32 +1605,32 @@ func NewAuthService(authRepo irepository.AuthLoader, userRepo irepository.UserLo
 
 var _ iservice.AuthManager = (*AuthService)(nil)
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (*util.LoginResponse, error) <span class="cov0" title="0">{
+func (s *AuthService) Login(ctx context.Context, email, password string) (*util.LoginResponse, error) <span class="cov8" title="1">{
         user, err := s.userRepo.GetUserByEmail(ctx, email)
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov8" title="1">{
                 logger.Log.Error("login failed", zap.Error(err))
                 return nil, err
         }</span>
-        <span class="cov0" title="0">if user == nil </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if user == nil </span><span class="cov0" title="0">{
                 logger.Log.Error("login failed: user not found",
                         zap.String("email", email),
                         zap.Error(err))
                 return nil, domain_errors.ErrUserNotFound
         }</span>
 
-        <span class="cov0" title="0">err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-        if err != nil </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+        if err != nil </span><span class="cov8" title="1">{
                 logger.Log.Error("login failed: invalid credentials", zap.Error(err))
                 return nil, domain_errors.ErrInvalidCredentials
         }</span>
 
-        <span class="cov0" title="0">accessToken, err := s.jwtSvc.GenerateToken(user.ID.String(), user.Role)
+        <span class="cov8" title="1">accessToken, err := s.jwtSvc.GenerateToken(user.ID.String(), user.Role)
         if err != nil </span><span class="cov0" title="0">{
                 logger.Log.Error("login failed: error generating access token", zap.Error(err))
                 return nil, domain_errors.WrapUnexpectedMsg(err, "error generating access token")
         }</span>
 
-        <span class="cov0" title="0">refreshToken := uuid.New().String()
+        <span class="cov8" title="1">refreshToken := uuid.New().String()
         expiresAt := time.Now().Add(time.Hour * 7 * 24)
 
         refToken, err := s.authRepo.CreateRefreshToken(ctx, user.ID, refreshToken, expiresAt)
@@ -1639,7 +1639,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*util.
                 return nil, domain_errors.WrapUnexpectedMsg(err, "error creating refresh token")
         }</span>
 
-        <span class="cov0" title="0">user.Password = ""
+        <span class="cov8" title="1">user.Password = ""
 
         return &amp;util.LoginResponse{
                 AccessToken:  accessToken,
@@ -1648,35 +1648,35 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (*util.
         }, nil</span>
 }
 
-func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (string, error) <span class="cov0" title="0">{
+func (s *AuthService) RefreshToken(ctx context.Context, refreshToken string) (string, error) <span class="cov8" title="1">{
         tokenData, err := s.authRepo.FindRefreshTokenByToken(ctx, refreshToken)
-        if err != nil </span><span class="cov0" title="0">{
+        if err != nil </span><span class="cov8" title="1">{
                 return "", domain_errors.NewUnauthorizedMsg("invalid session")
         }</span>
 
-        <span class="cov0" title="0">if tokenData == nil || time.Now().After(tokenData.ExpiresAt) </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">if tokenData == nil || time.Now().After(tokenData.ExpiresAt) </span><span class="cov8" title="1">{
                 _ = s.authRepo.DeleteRefreshTokenByToken(ctx, refreshToken)
                 return "", domain_errors.NewUnauthorizedMsg("invalid session")
         }</span>
 
-        <span class="cov0" title="0">user, err := s.userRepo.GetUserByID(ctx, tokenData.UserID)
-        if err != nil || user == nil </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">user, err := s.userRepo.GetUserByID(ctx, tokenData.UserID)
+        if err != nil || user == nil </span><span class="cov8" title="1">{
                 return "", domain_errors.ErrUserNotFound
         }</span>
 
-        <span class="cov0" title="0">newAccessToken, err := s.jwtSvc.GenerateToken(tokenData.UserID.String(), user.Role)
+        <span class="cov8" title="1">newAccessToken, err := s.jwtSvc.GenerateToken(tokenData.UserID.String(), user.Role)
         if err != nil </span><span class="cov0" title="0">{
                 return "", domain_errors.WrapUnexpectedMsg(err, "error generating new access token")
         }</span>
 
-        <span class="cov0" title="0">return newAccessToken, nil</span>
+        <span class="cov8" title="1">return newAccessToken, nil</span>
 }
 
-func (s *AuthService) Logout(ctx context.Context, refreshToken string) error <span class="cov0" title="0">{
-        if err := s.authRepo.DeleteRefreshTokenByToken(ctx, refreshToken); err != nil </span><span class="cov0" title="0">{
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error <span class="cov8" title="1">{
+        if err := s.authRepo.DeleteRefreshTokenByToken(ctx, refreshToken); err != nil </span><span class="cov8" title="1">{
                 return domain_errors.WrapUnexpectedMsg(err, "error deleting refresh token")
         }</span>
-        <span class="cov0" title="0">return nil</span>
+        <span class="cov8" title="1">return nil</span>
 }
 </pre>
 		
