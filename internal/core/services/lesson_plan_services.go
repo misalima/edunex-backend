@@ -1,0 +1,124 @@
+package services
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"path/filepath"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"go.uber.org/zap"
+
+	"github.com/misalima/edunex-backend/internal/core/domain"
+	"github.com/misalima/edunex-backend/internal/core/domain_errors"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
+	"github.com/misalima/edunex-backend/internal/infra/logger"
+)
+
+const DefaultLinkExpiration = 3600
+
+type LessonPlanService struct {
+	repo    irepository.LessonPlanLoader
+	storage irepository.StorageUploader
+}
+
+var _ iservice.LessonPlanManager = (*LessonPlanService)(nil)
+
+func NewLessonPlanService(repo irepository.LessonPlanLoader, storage irepository.StorageUploader) *LessonPlanService {
+	return &LessonPlanService{
+		repo:    repo,
+		storage: storage,
+	}
+}
+
+func (s *LessonPlanService) CreateLessonPlan(ctx context.Context, lp *domain.LessonPlan, reader io.Reader, filename, contentType string) (*domain.LessonPlan, error) {
+	if lp == nil {
+		return nil, domain_errors.NewBadRequestMsg("lesson plan is required")
+	}
+	if lp.UserID == uuid.Nil {
+		return nil, domain_errors.NewBadRequestMsg("user id is required")
+	}
+	if strings.TrimSpace(lp.Title) == "" {
+		return nil, domain_errors.NewBadRequestMsg("title is required")
+	}
+
+	ext := strings.ToLower(filepath.Ext(filename))
+	if ext == "" {
+		ext = ""
+	}
+
+	objectPath := fmt.Sprintf("lesson_plans/%s/%s%s", lp.UserID.String(), uuid.New().String(), ext)
+
+	logger.Log.Info("lesson plan upload start", zap.String("user_id", lp.UserID.String()), zap.String("object_path", objectPath), zap.String("title", lp.Title))
+
+	uploadedURL, err := s.storage.Upload(ctx, objectPath, reader, contentType)
+	if err != nil {
+		logger.Log.Error("storage upload failed", zap.Error(err), zap.String("user_id", lp.UserID.String()), zap.String("object_path", objectPath))
+		return nil, err
+	}
+
+	lp.FilePath = objectPath
+	if lp.Status == "" {
+		lp.Status = "pending"
+	}
+
+	id, err := s.repo.InsertLessonPlan(ctx, lp)
+	if err != nil {
+		logger.Log.Error("db insert failed, attempting cleanup", zap.Error(err), zap.String("object_path", objectPath), zap.String("user_id", lp.UserID.String()))
+		if derr := s.storage.Delete(ctx, objectPath); derr != nil {
+			logger.Log.Error("cleanup delete failed", zap.Error(derr), zap.String("object_path", objectPath))
+		}
+		return nil, err
+	}
+
+	createdLP, err := s.repo.GetLessonPlanByID(ctx, id)
+	if err != nil {
+		logger.Log.Error("failed to fetch created lesson plan", zap.Error(err), zap.String("lesson_plan_id", id.String()))
+		return nil, err
+	}
+
+	logger.Log.Info("lesson plan created", zap.String("lesson_plan_id", createdLP.ID.String()), zap.String("user_id", createdLP.UserID.String()), zap.String("access_url", uploadedURL))
+	return createdLP, nil
+}
+
+func (s *LessonPlanService) GetLessonPlanWithSignedURL(ctx context.Context, id uuid.UUID) (*domain.LessonPlan, string, error) {
+	lp, err := s.repo.GetLessonPlanByID(ctx, id)
+	if err != nil {
+		return nil, "", err
+	}
+	if lp == nil {
+		return nil, "", domain_errors.NewNotFoundMsg("lesson plan not found")
+	}
+
+	signedURL, err := s.storage.SignURL(ctx, lp.FilePath, DefaultLinkExpiration)
+	if err != nil {
+		logger.Log.Error("failed to sign url", zap.Error(err), zap.String("lesson_plan_id", id.String()), zap.String("file_path", lp.FilePath))
+		return lp, "", domain_errors.WrapUnexpectedMsg(err, "failed to create signed url")
+	}
+
+	return lp, signedURL, nil
+}
+
+func (s *LessonPlanService) ListLessonPlansWithSignedURLs(ctx context.Context) ([]*domain.LessonPlan, map[string]string, error) {
+	lps, err := s.repo.ListLessonPlans(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	urls := make(map[string]string, len(lps))
+	for _, lp := range lps {
+		if lp == nil {
+			continue
+		}
+		signed, err := s.storage.SignURL(ctx, lp.FilePath, DefaultLinkExpiration)
+		if err != nil {
+			logger.Log.Error("failed to sign url for lesson plan", zap.Error(err), zap.String("lesson_plan_id", lp.ID.String()), zap.String("file_path", lp.FilePath))
+			continue
+		}
+		urls[lp.ID.String()] = signed
+	}
+
+	return lps, urls, nil
+}
