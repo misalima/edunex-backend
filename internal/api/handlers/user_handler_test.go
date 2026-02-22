@@ -1,11 +1,9 @@
 package handlers_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/labstack/echo/v4"
@@ -14,7 +12,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/api/handlers"
-	"github.com/misalima/edunex-backend/internal/api/handlers/dto/request"
 	"github.com/misalima/edunex-backend/internal/api/handlers/mocks"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
@@ -39,94 +36,6 @@ var _ = Describe("UserHandler", func() {
 
 	AfterEach(func() {
 		ctrl.Finish()
-	})
-
-	Describe("CreateUser", func() {
-		Context("with valid user data", func() {
-			It("should create user and return created response", func() {
-				// Arrange
-				createReq := request.CreateUserRequest{
-					Name:     "Test User",
-					Email:    "test@example.com",
-					Password: "password123",
-				}
-				reqBody, _ := json.Marshal(createReq)
-				req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(reqBody))
-				req.Header.Set("Content-Type", "application/json")
-				echoCtx := echoInstance.NewContext(req, recorder)
-
-				expectedUser := &domain.User{
-					ID:      uuid.New(),
-					Name:    "Test User",
-					Email:   "test@example.com",
-					Role:    "teacher",
-					Created: time.Now(),
-					Updated: time.Now(),
-				}
-
-				mockUserMgr.EXPECT().
-					CreateUser(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(ctx interface{}, user *domain.User) (*domain.User, error) {
-						user.ID = expectedUser.ID
-						user.Role = "teacher"
-						user.Created = expectedUser.Created
-						user.Updated = expectedUser.Updated
-						return user, nil
-					})
-
-				// Act
-				err := userHandler.CreateUser(echoCtx)
-
-				// Assert
-				Expect(err).To(BeNil())
-				Expect(recorder.Code).To(Equal(http.StatusCreated))
-
-				var resp map[string]interface{}
-				err = json.Unmarshal(recorder.Body.Bytes(), &resp)
-				Expect(err).To(BeNil())
-				Expect(resp["name"]).To(Equal("Test User"))
-				Expect(resp["email"]).To(Equal("test@example.com"))
-				Expect(resp["role"]).To(Equal("teacher"))
-			})
-		})
-
-		Context("with invalid request payload", func() {
-			It("should return bad request error", func() {
-				// Arrange
-				req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader([]byte("invalid json")))
-				req.Header.Set("Content-Type", "application/json")
-				echoCtx := echoInstance.NewContext(req, recorder)
-
-				// Act
-				err := userHandler.CreateUser(echoCtx)
-
-				// Assert
-				Expect(err).To(BeNil())
-				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
-			})
-		})
-
-		Context("with validation errors", func() {
-			It("should return bad request error for missing name", func() {
-				// Arrange
-				createReq := request.CreateUserRequest{
-					Email:    "test@example.com",
-					Password: "password123",
-					// Name is missing
-				}
-				reqBody, _ := json.Marshal(createReq)
-				req := httptest.NewRequest(http.MethodPost, "/api/users", bytes.NewReader(reqBody))
-				req.Header.Set("Content-Type", "application/json")
-				echoCtx := echoInstance.NewContext(req, recorder)
-
-				// Act
-				err := userHandler.CreateUser(echoCtx)
-
-				// Assert
-				Expect(err).To(BeNil())
-				Expect(recorder.Code).To(Equal(http.StatusBadRequest))
-			})
-		})
 	})
 
 	Describe("GetUserByID", func() {

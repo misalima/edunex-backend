@@ -9,44 +9,18 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/request"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/response"
+	"github.com/misalima/edunex-backend/internal/api/util"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
 )
 
 type UserHandler struct {
-	svc iservice.UserManager
+	svc    iservice.UserManager
+	jwtSvc iservice.JWTManager
 }
 
-func NewUserHandler(svc iservice.UserManager) *UserHandler {
-	return &UserHandler{svc: svc}
-}
-
-func (u *UserHandler) CreateUser(c echo.Context) error {
-	var req request.CreateUserRequest
-
-	if err := c.Bind(&req); err != nil {
-		log.Error(err)
-		return c.JSON(http.StatusBadRequest, err)
-	}
-
-	if err := req.ValidateCreateUserRequest(); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
-	}
-
-	user := domain.User{
-		Name:     req.Name,
-		Email:    req.Email,
-		Password: req.Password,
-	}
-
-	createdUser, err := u.svc.CreateUser(c.Request().Context(), &user)
-	if err != nil {
-		return handleDomainError(c, err)
-	}
-
-	userResponse := response.FromDomainUserToResponse(createdUser)
-
-	return c.JSON(http.StatusCreated, userResponse)
+func NewUserHandler(svc iservice.UserManager, jwtSvc iservice.JWTManager) *UserHandler {
+	return &UserHandler{svc: svc, jwtSvc: jwtSvc}
 }
 
 func (u *UserHandler) ListUsers(c echo.Context) error {
@@ -122,4 +96,30 @@ func (h *UserHandler) UpdateRole(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "user role updated successfully"})
+}
+
+func (h *UserHandler) GetMe(c echo.Context) error {
+	tokenStr := util.ExtractBearerToken(c)
+
+	claims, err := h.jwtSvc.ValidateTokenViaAPI(tokenStr)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+
+	userID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+	userEmail := claims.Email
+	if userID == uuid.Nil || userEmail == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+
+	user, err := h.svc.GetOrCreateUserFromSupabaseID(c.Request().Context(), userID, userEmail)
+	if err != nil {
+		return handleDomainError(c, err)
+	}
+
+	resp := response.FromDomainUserToResponse(user)
+	return c.JSON(http.StatusOK, resp)
 }

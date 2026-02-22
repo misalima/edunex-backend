@@ -20,6 +20,14 @@ func getUserIDFromContext(c echo.Context) (uuid.UUID, error) {
 	return uuid.Nil, errors.New("user_id not found in context")
 }
 
+func getUserEmailFromContext(c echo.Context) (string, error) {
+	val := c.Get("user_email")
+	if email, ok := val.(string); ok {
+		return email, nil
+	}
+	return "", errors.New("user_email not found in context")
+}
+
 func handleDomainError(c echo.Context, err error) error {
 	status := domain_errors.MapErrorToStatus(err)
 	code := domain_errors.CodeFromError(err)

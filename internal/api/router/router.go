@@ -8,29 +8,25 @@ import (
 
 func RegisterRoutes(e *echo.Echo, c *container.Container) {
 	// Rotas públicas
-	e.GET("/api/health", c.GetHealthHandler().HealthHandler)
-	e.POST("/api/sign-up", c.GetAuthHandler().SignUp)
-	e.POST("/api/login", c.GetAuthHandler().Login)
-	e.POST("/api/refresh", c.GetAuthHandler().Refresh)
+	e.GET("/health", c.GetHealthHandler().HealthHandler)
 
-	apiGroup := e.Group("/api")
-	apiGroup.Use(middleware.AuthMiddleware(c.GetJWTService()))
-	apiGroup.POST("/logout", c.GetAuthHandler().Logout)
+	v1 := e.Group("/api/v1")
+	v1.GET("/me", c.GetUserHandler().GetMe)
+	v1.Use(middleware.AuthMiddleware(c.GetJWTService()))
 
 	// Users
-	userGroup := apiGroup.Group("/users")
-	userGroup.POST("", c.GetUserHandler().CreateUser)
+	userGroup := v1.Group("/users")
 	userGroup.GET("", c.GetUserHandler().ListUsers)
 	userGroup.GET("/:id", c.GetUserHandler().GetUserByID)
 	userGroup.PUT("/:id", c.GetUserHandler().UpdateUser)
 
 	// Admin
-	adminGroup := apiGroup.Group("/admin")
+	adminGroup := v1.Group("/admin")
 	adminGroup.Use(middleware.AdminOnly)
 	adminGroup.PATCH("/users/role", c.GetUserHandler().UpdateRole)
 
 	// Lesson Plans
-	lPGroup := apiGroup.Group("/lesson-plans")
+	lPGroup := v1.Group("/lesson-plans")
 	lPGroup.POST("", c.GetLessonPlanHandler().Create)
 	lPGroup.GET("", c.GetLessonPlanHandler().List)
 	lPGroup.GET("/:id", c.GetLessonPlanHandler().GetByID)

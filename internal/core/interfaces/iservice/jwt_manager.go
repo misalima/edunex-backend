@@ -1,5 +1,8 @@
 package iservice
 
+import "github.com/misalima/edunex-backend/internal/core/util"
+
 type JWTManager interface {
-	GenerateToken(userID, role string) (string, error)
+	ValidateToken(token string) (*util.TokenClaims, error)
+	ValidateTokenViaAPI(token string) (*util.TokenClaims, error)
 }
