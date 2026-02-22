@@ -1,9 +1,14 @@
 package security
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -19,63 +24,63 @@ var (
 )
 
 type JWTService struct {
-	secretKey   string
+	publicKey   *ecdsa.PublicKey
 	issuer      string
 	supabaseURL string
 	anonKey     string
 }
 
-func NewJWTService(secret, issuer, supabaseURL, anonKey string) *JWTService {
+func NewJWTService(xBase64, yBase64, issuer, supabaseURL, anonKey string) (*JWTService, error) {
+	xBytes, err := base64.RawURLEncoding.DecodeString(xBase64)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding X: %w", err)
+	}
+	yBytes, err := base64.RawURLEncoding.DecodeString(yBase64)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding Y: %w", err)
+	}
+
+	pubKey := &ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     new(big.Int).SetBytes(xBytes),
+		Y:     new(big.Int).SetBytes(yBytes),
+	}
+
 	return &JWTService{
-		secretKey:   secret,
+		publicKey:   pubKey,
 		issuer:      issuer,
 		supabaseURL: supabaseURL,
 		anonKey:     anonKey,
-	}
+	}, nil
 }
 
 func (s *JWTService) ValidateToken(tokenString string) (*util.TokenClaims, error) {
-	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			log.Warn("invalid signing method")
-			return nil, ErrInvalidToken
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodECDSA); !ok {
+			return nil, fmt.Errorf("expected method: %v", t.Header["alg"])
 		}
-		return []byte(s.secretKey), nil
+		return s.publicKey, nil
 	})
 
 	if err != nil || !token.Valid {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			log.Warn("token expired")
-			return nil, ErrExpiredToken
-		}
-		log.Warn("invalid token")
-		return nil, ErrInvalidToken
+		return nil, errors.New("invalid token")
 	}
 
-	iss, ok := claims["iss"].(string)
-	if !ok || iss != s.issuer {
-		log.Warn("invalid issuer")
-		return nil, ErrInvalidToken
+	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		userID, _ := claims["sub"].(string)
+		email, _ := claims["email"].(string)
+
+		return &util.TokenClaims{
+			UserID: userID,
+			Email:  email,
+		}, nil
 	}
 
-	userID, ok := claims["sub"].(string)
-	if !ok || userID == "" {
-		log.Warn("invalid user id")
-		return nil, ErrInvalidToken
-	}
-
-	email, _ := claims["email"].(string)
-
-	return &util.TokenClaims{
-		UserID: userID,
-		Email:  email,
-	}, nil
+	return nil, errors.New("invalid claims")
 }
 
 func (s *JWTService) ValidateTokenViaAPI(tokenString string) (*util.TokenClaims, error) {
 	client := &http.Client{Timeout: 5 * time.Second}
-	log.Debugf("supabase url: %s", s.supabaseURL)
 	req, _ := http.NewRequest("GET", s.supabaseURL+"/auth/v1/user", nil)
 
 	req.Header.Set("Authorization", "Bearer "+tokenString)

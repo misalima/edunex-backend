@@ -43,12 +43,17 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 func (c *Container) GetJWTService() iservice.JWTManager {
 	c.jwtOnce.Do(func() {
 		expectedIssuer := fmt.Sprintf("%s/auth/v1", c.cfg.SupabaseURL)
-		c.jwtService = security.NewJWTService(
-			c.cfg.SupabaseJWTSecret,
+		svc, err := security.NewJWTService(
+			c.cfg.SupabaseJWTKX,
+			c.cfg.SupabaseJWTKY,
 			expectedIssuer,
 			c.cfg.SupabaseURL,
 			c.cfg.SupabaseAnonKey,
 		)
+		if err != nil {
+			panic(fmt.Sprintf("Falha ao iniciar JWT Service: %v", err))
+		}
+		c.jwtService = svc
 	})
 	return c.jwtService
 }

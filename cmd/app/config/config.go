@@ -13,7 +13,8 @@ type Config struct {
 	SupabaseServiceKey string
 	SupabaseBucket     string
 	SupabaseAnonKey    string
-	SupabaseJWTSecret  string
+	SupabaseJWTKX      string
+	SupabaseJWTKY      string
 }
 
 func Load() *Config {
@@ -35,7 +36,8 @@ func Load() *Config {
 		SupabaseServiceKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
 		SupabaseBucket:     getEnv("SUPABASE_BUCKET", ""),
 		SupabaseAnonKey:    getEnv("SUPABASE_ANON_KEY", ""),
-		SupabaseJWTSecret:  getEnv("SUPABASE_JWT_SECRET", ""),
+		SupabaseJWTKX:      getEnv("SUPABASE_JWT_K_X", ""),
+		SupabaseJWTKY:      getEnv("SUPABASE_JWT_K_Y", ""),
 	}
 
 	validateRequired(cfg)
@@ -55,10 +57,11 @@ func getEnv(key, defaultValue string) string {
 
 func validateRequired(cfg *Config) {
 	required := map[string]string{
-		"SUPABASE_URL":        cfg.SupabaseURL,
-		"SUPABASE_JWT_SECRET": cfg.SupabaseJWTSecret,
-		"SUPABASE_ANON_KEY":   cfg.SupabaseAnonKey,
-		"DB_URL":              cfg.DBURL,
+		"SUPABASE_URL":      cfg.SupabaseURL,
+		"SUPABASE_JWT_K_X":  cfg.SupabaseJWTKX,
+		"SUPABASE_JWT_K_Y":  cfg.SupabaseJWTKY,
+		"SUPABASE_ANON_KEY": cfg.SupabaseAnonKey,
+		"DB_URL":            cfg.DBURL,
 	}
 
 	var missing []string
