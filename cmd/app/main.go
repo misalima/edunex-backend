@@ -45,7 +45,7 @@ func main() {
 	e := echo.New()
 	setupMiddleware(e)
 
-	ctn := container.NewContainer(db)
+	ctn := container.NewContainer(db, cfg)
 	router.RegisterRoutes(e, ctn)
 
 	log.Printf("Server starting at port %s", cfg.Port)

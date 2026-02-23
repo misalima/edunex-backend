@@ -5,10 +5,10 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/misalima/edunex-backend/internal/infra/security"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
 )
 
-func AuthMiddleware(jwtService *security.JWTService) echo.MiddlewareFunc {
+func AuthMiddleware(jwtService iservice.JWTManager) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
@@ -27,7 +27,8 @@ func AuthMiddleware(jwtService *security.JWTService) echo.MiddlewareFunc {
 			}
 
 			c.Set("user_id", claims.UserID)
-			c.Set("user_role", claims.Role)
+			c.Set("user_email", claims.Email)
+
 			return next(c)
 		}
 	}

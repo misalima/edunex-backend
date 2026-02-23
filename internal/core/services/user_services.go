@@ -3,13 +3,13 @@ package services
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var _ iservice.UserManager = (*UserService)(nil)
@@ -27,12 +27,8 @@ func NewUserService(userRepo irepository.UserLoader) *UserService {
 }
 
 func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domain.User, error) {
-	if user == nil || user.Name == "" || user.Email == "" || user.Password == "" {
+	if user == nil || user.Name == "" || user.Email == "" {
 		return nil, domain_errors.NewBadRequestMsg("missing required fields")
-	}
-
-	if user.ID != uuid.Nil {
-		return nil, domain_errors.NewBadRequestMsg("user ID should not be set")
 	}
 
 	existingUser, err := s.userRepo.GetUserByEmail(ctx, user.Email)
@@ -44,12 +40,6 @@ func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domai
 	} else if existingUser != nil {
 		return nil, domain_errors.NewConflictMsg("email already in use")
 	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, domain_errors.WrapUnexpectedMsg(err, "failed to hash password")
-	}
-	user.Password = string(hashedPassword)
 
 	if user.Role == "" {
 		user.Role = "coordinator"
@@ -65,8 +55,6 @@ func (s *UserService) CreateUser(ctx context.Context, user *domain.User) (*domai
 		return nil, err
 	}
 
-	createdUser.Password = ""
-
 	return createdUser, nil
 }
 
@@ -80,7 +68,6 @@ func (s *UserService) GetUserByID(ctx context.Context, id uuid.UUID) (*domain.Us
 		return nil, domain_errors.NewNotFoundMsg("user not found")
 	}
 
-	user.Password = ""
 	return user, nil
 }
 
@@ -97,7 +84,6 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*domain
 		return nil, domain_errors.NewNotFoundMsg("user not found")
 	}
 
-	user.Password = ""
 	return user, nil
 }
 
@@ -119,9 +105,6 @@ func (s *UserService) ListUsers(ctx context.Context) ([]*domain.User, error) {
 		return nil, err
 	}
 
-	for _, u := range users {
-		u.Password = ""
-	}
 	return users, nil
 }
 
@@ -141,4 +124,34 @@ func (s *UserService) UpdateUserRole(ctx context.Context, userID uuid.UUID, newR
 	}
 
 	return nil
+}
+
+func (s *UserService) GetOrCreateUserFromSupabaseID(ctx context.Context, userID uuid.UUID, userEmail string) (*domain.User, error) {
+	user, err := s.GetUserByID(ctx, userID)
+	if err != nil {
+		if !errors.Is(err, domain_errors.ErrNotFound) {
+			return nil, err
+		}
+	}
+
+	if user != nil {
+		return user, nil
+	}
+	newUser := &domain.User{
+		ID:    userID,
+		Name:  extractNameFromEmail(userEmail),
+		Email: userEmail,
+	}
+	createdUser, err := s.CreateUser(ctx, newUser)
+	if err != nil {
+		return nil, err
+	}
+	return createdUser, nil
+}
+
+func extractNameFromEmail(email string) string {
+	if email == "" {
+		return "EduNex User"
+	}
+	return strings.Split(email, "@")[0]
 }

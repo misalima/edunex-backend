@@ -14,4 +14,5 @@ type UserManager interface {
 	UpdateUser(ctx context.Context, user *domain.User) error
 	ListUsers(ctx context.Context) ([]*domain.User, error)
 	UpdateUserRole(ctx context.Context, userID uuid.UUID, newRole string) error
+	GetOrCreateUserFromSupabaseID(ctx context.Context, userID uuid.UUID, userEmail string) (*domain.User, error)
 }

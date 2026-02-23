@@ -1,11 +1,12 @@
 package container
 
 import (
-	"os"
+	"fmt"
 	"sync"
 
-	"github.com/labstack/gommon/log"
+	"github.com/misalima/edunex-backend/cmd/app/config"
 	"github.com/misalima/edunex-backend/internal/api/handlers"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
 	"github.com/misalima/edunex-backend/internal/core/services"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
 	"github.com/misalima/edunex-backend/internal/infra/security"
@@ -14,9 +15,9 @@ import (
 )
 
 // Container centraliza a criação (lazy) e cache das dependências da aplicação.
-// Implementado com sync.Once para inicialização única e thread-safe.
 type Container struct {
-	db *gorm.DB
+	db  *gorm.DB
+	cfg *config.Config
 
 	jwtOnce    sync.Once
 	jwtService *security.JWTService
@@ -24,12 +25,11 @@ type Container struct {
 	storageOnce   sync.Once
 	storageClient *supabase.Client
 
-	userOnce    sync.Once
+	userSvcOnce sync.Once
 	userService *services.UserService
-	userHandler *handlers.UserHandler
 
-	authOnce    sync.Once
-	authHandler *handlers.AuthHandler
+	userHdlOnce sync.Once
+	userHandler *handlers.UserHandler
 
 	healthOnce    sync.Once
 	healthHandler *handlers.HealthHandler
@@ -38,58 +38,66 @@ type Container struct {
 	lessonPlanHandler *handlers.LessonPlanHandler
 }
 
-func NewContainer(db *gorm.DB) *Container {
-	return &Container{db: db}
+func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
+	return &Container{db: db, cfg: cfg}
 }
 
 func (c *Container) GetJWTService() *security.JWTService {
 	c.jwtOnce.Do(func() {
-		secret := os.Getenv("JWT_SECRET")
-		if secret == "" {
-			log.Info("JWT secret not found, using default secret")
-			secret = "default_secret_change_me"
+		expectedIssuer := fmt.Sprintf("%s/auth/v1", c.cfg.SupabaseURL)
+		svc, err := security.NewJWTService(
+			c.cfg.SupabaseJWTKX,
+			c.cfg.SupabaseJWTKY,
+			expectedIssuer,
+			c.cfg.SupabaseURL,
+			c.cfg.SupabaseAnonKey,
+		)
+		if err != nil {
+			panic(fmt.Sprintf("Falha ao iniciar JWT Service: %v", err))
 		}
-		c.jwtService = security.NewJWTService(secret)
+		c.jwtService = svc
 	})
 	return c.jwtService
 }
 
+func (c *Container) GetJWTManager() iservice.JWTManager {
+	return c.GetJWTService()
+}
+
+func (c *Container) GetUserService() *services.UserService {
+	c.userSvcOnce.Do(func() {
+		userRepo := postgres.NewGormUserRepository(c.db)
+		c.userService = services.NewUserService(userRepo)
+	})
+	return c.userService
+}
+
+func (c *Container) GetUserManager() iservice.UserManager {
+	return c.GetUserService()
+}
+
 func (c *Container) GetStorageClient() *supabase.Client {
 	c.storageOnce.Do(func() {
-		url := os.Getenv("SUPABASE_URL")
-		key := os.Getenv("SUPABASE_SERVICE_ROLE_KEY")
-		bucket := os.Getenv("SUPABASE_BUCKET")
-		if url == "" || key == "" || bucket == "" {
-			log.Fatal("supabase configuration is missing (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET)")
+		// Usa o cfg em vez de os.Getenv
+		if c.cfg.SupabaseURL == "" || c.cfg.SupabaseServiceKey == "" || c.cfg.SupabaseBucket == "" {
+			panic("supabase configuration is missing (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET)")
 		}
-		c.storageClient = supabase.NewClient(url, key, bucket)
+		c.storageClient = supabase.NewClient(
+			c.cfg.SupabaseURL,
+			c.cfg.SupabaseServiceKey,
+			c.cfg.SupabaseBucket,
+		)
 	})
 	return c.storageClient
 }
 
 func (c *Container) GetUserHandler() *handlers.UserHandler {
-	c.userOnce.Do(func() {
-		userRepo := postgres.NewGormUserRepository(c.db)
-		c.userService = services.NewUserService(userRepo)
-		c.userHandler = handlers.NewUserHandler(c.userService)
+	c.userHdlOnce.Do(func() {
+		svc := c.GetUserService()
+		jwt := c.GetJWTManager()
+		c.userHandler = handlers.NewUserHandler(svc, jwt)
 	})
 	return c.userHandler
-}
-
-func (c *Container) GetAuthHandler() *handlers.AuthHandler {
-	c.authOnce.Do(func() {
-		authRepo := postgres.NewGormAuthRepository(c.db)
-		userRepoForAuth := postgres.NewGormUserRepository(c.db)
-
-		jwt := c.GetJWTService()
-
-		authSvc := services.NewAuthService(authRepo, userRepoForAuth, jwt)
-
-		c.GetUserHandler()
-
-		c.authHandler = handlers.NewAuthHandler(authSvc, c.userService)
-	})
-	return c.authHandler
 }
 
 func (c *Container) GetHealthHandler() *handlers.HealthHandler {
