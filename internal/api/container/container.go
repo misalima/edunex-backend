@@ -40,7 +40,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	return &Container{db: db, cfg: cfg}
 }
 
-func (c *Container) GetJWTService() iservice.JWTManager {
+func (c *Container) GetJWTService() *security.JWTService {
 	c.jwtOnce.Do(func() {
 		expectedIssuer := fmt.Sprintf("%s/auth/v1", c.cfg.SupabaseURL)
 		svc, err := security.NewJWTService(
@@ -56,6 +56,22 @@ func (c *Container) GetJWTService() iservice.JWTManager {
 		c.jwtService = svc
 	})
 	return c.jwtService
+}
+
+func (c *Container) GetJWTManager() iservice.JWTManager {
+	return c.GetJWTService()
+}
+
+func (c *Container) GetUserService() *services.UserService {
+	c.userOnce.Do(func() {
+		userRepo := postgres.NewGormUserRepository(c.db)
+		c.userService = services.NewUserService(userRepo)
+	})
+	return c.userService
+}
+
+func (c *Container) GetUserManager() iservice.UserManager {
+	return c.GetUserService()
 }
 
 func (c *Container) GetStorageClient() *supabase.Client {
@@ -75,10 +91,11 @@ func (c *Container) GetStorageClient() *supabase.Client {
 
 func (c *Container) GetUserHandler() *handlers.UserHandler {
 	c.userOnce.Do(func() {
-		userRepo := postgres.NewGormUserRepository(c.db)
-		c.userService = services.NewUserService(userRepo)
-
-		c.userHandler = handlers.NewUserHandler(c.userService, c.GetJWTService())
+		if c.userHandler == nil {
+			svc := c.GetUserService()
+			jwt := c.GetJWTManager()
+			c.userHandler = handlers.NewUserHandler(svc, jwt)
+		}
 	})
 	return c.userHandler
 }

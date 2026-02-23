@@ -12,7 +12,7 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 
 	v1 := e.Group("/api/v1")
 	v1.GET("/me", c.GetUserHandler().GetMe)
-	v1.Use(middleware.AuthMiddleware(c.GetJWTService()))
+	v1.Use(middleware.AuthMiddleware(c.GetJWTManager()))
 
 	// Users
 	userGroup := v1.Group("/users")
@@ -22,7 +22,7 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 
 	// Admin
 	adminGroup := v1.Group("/admin")
-	adminGroup.Use(middleware.AdminOnly)
+	adminGroup.Use(middleware.AdminOnly(c.GetUserManager()))
 	adminGroup.PATCH("/users/role", c.GetUserHandler().UpdateRole)
 
 	// Lesson Plans

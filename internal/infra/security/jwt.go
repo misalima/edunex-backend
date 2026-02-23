@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	ErrInvalidToken = errors.New("token inválido")
-	ErrExpiredToken = errors.New("token expirado")
+	ErrInvalidToken  = errors.New("token inválido")
+	ErrExpiredToken  = errors.New("token expirado")
+	ErrInvalidClaims = errors.New("claims inválidos")
 )
 
 type JWTService struct {
@@ -63,10 +64,14 @@ func (s *JWTService) ValidateToken(tokenString string) (*util.TokenClaims, error
 	})
 
 	if err != nil || !token.Valid {
-		return nil, errors.New("invalid token")
+		return nil, ErrInvalidToken
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
+		iss, ok := claims["iss"].(string)
+		if !ok || iss != s.issuer {
+			return nil, ErrInvalidToken
+		}
 		userID, _ := claims["sub"].(string)
 		email, _ := claims["email"].(string)
 
@@ -76,7 +81,7 @@ func (s *JWTService) ValidateToken(tokenString string) (*util.TokenClaims, error
 		}, nil
 	}
 
-	return nil, errors.New("invalid claims")
+	return nil, ErrInvalidClaims
 }
 
 func (s *JWTService) ValidateTokenViaAPI(tokenString string) (*util.TokenClaims, error) {
