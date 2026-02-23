@@ -11,5 +11,8 @@ func ExtractBearerToken(c echo.Context) string {
 	if authHeader == "" {
 		return ""
 	}
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return ""
+	}
 	return strings.TrimPrefix(authHeader, "Bearer ")
 }
