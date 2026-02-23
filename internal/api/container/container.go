@@ -25,8 +25,10 @@ type Container struct {
 	storageOnce   sync.Once
 	storageClient *supabase.Client
 
-	userOnce    sync.Once
+	userSvcOnce sync.Once
 	userService *services.UserService
+
+	userHdlOnce sync.Once
 	userHandler *handlers.UserHandler
 
 	healthOnce    sync.Once
@@ -63,7 +65,7 @@ func (c *Container) GetJWTManager() iservice.JWTManager {
 }
 
 func (c *Container) GetUserService() *services.UserService {
-	c.userOnce.Do(func() {
+	c.userSvcOnce.Do(func() {
 		userRepo := postgres.NewGormUserRepository(c.db)
 		c.userService = services.NewUserService(userRepo)
 	})
@@ -90,12 +92,10 @@ func (c *Container) GetStorageClient() *supabase.Client {
 }
 
 func (c *Container) GetUserHandler() *handlers.UserHandler {
-	c.userOnce.Do(func() {
-		if c.userHandler == nil {
-			svc := c.GetUserService()
-			jwt := c.GetJWTManager()
-			c.userHandler = handlers.NewUserHandler(svc, jwt)
-		}
+	c.userHdlOnce.Do(func() {
+		svc := c.GetUserService()
+		jwt := c.GetJWTManager()
+		c.userHandler = handlers.NewUserHandler(svc, jwt)
 	})
 	return c.userHandler
 }

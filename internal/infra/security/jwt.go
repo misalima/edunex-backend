@@ -72,8 +72,14 @@ func (s *JWTService) ValidateToken(tokenString string) (*util.TokenClaims, error
 		if !ok || iss != s.issuer {
 			return nil, ErrInvalidToken
 		}
-		userID, _ := claims["sub"].(string)
-		email, _ := claims["email"].(string)
+		userID, ok := claims["sub"].(string)
+		if !ok || userID == "" {
+			return nil, ErrInvalidClaims
+		}
+		email, ok := claims["email"].(string)
+		if !ok || email == "" {
+			return nil, ErrInvalidClaims
+		}
 
 		return &util.TokenClaims{
 			UserID: userID,
@@ -92,15 +98,15 @@ func (s *JWTService) ValidateTokenViaAPI(tokenString string) (*util.TokenClaims,
 	req.Header.Set("apikey", s.anonKey)
 
 	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		return nil, errors.New("token inválido ou usuário revogado")
-	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
 			log.Error("failed to close response body", zap.Error(err))
 		}
 	}(resp.Body)
+	if err != nil || resp.StatusCode != 200 {
+		return nil, errors.New("token inválido ou usuário revogado")
+	}
 
 	var user struct {
 		ID    string `json:"id"`
