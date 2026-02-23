@@ -134,17 +134,19 @@ func (s *UserService) GetOrCreateUserFromSupabaseID(ctx context.Context, userID 
 		}
 	}
 
-	var createdUser *domain.User
-
-	if user == nil {
-		user = &domain.User{
-			ID:    userID,
-			Name:  extractNameFromEmail(userEmail),
-			Email: userEmail,
-		}
-		createdUser, err = s.CreateUser(ctx, user)
+	if user != nil {
+		return user, nil
 	}
-	return createdUser, err
+	newUser := &domain.User{
+		ID:    userID,
+		Name:  extractNameFromEmail(userEmail),
+		Email: userEmail,
+	}
+	createdUser, err := s.CreateUser(ctx, newUser)
+	if err != nil {
+		return nil, err
+	}
+	return createdUser, nil
 }
 
 func extractNameFromEmail(email string) string {
