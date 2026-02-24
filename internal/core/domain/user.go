@@ -7,13 +7,12 @@ import (
 )
 
 type User struct {
-	ID       uuid.UUID
-	Name     string
-	Email    string
-	Password string
-	Role     string
-	Created  time.Time
-	Updated  time.Time
+	ID      uuid.UUID
+	Name    string
+	Email   string
+	Role    string
+	Created time.Time
+	Updated time.Time
 }
 
 func (u *User) IsAdmin() bool {

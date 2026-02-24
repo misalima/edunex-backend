@@ -9,6 +9,6 @@ type LoginResponse struct {
 }
 
 type TokenClaims struct {
-	UserID string
-	Role   string
+	UserID string `json:"sub"`
+	Email  string `json:"email"`
 }

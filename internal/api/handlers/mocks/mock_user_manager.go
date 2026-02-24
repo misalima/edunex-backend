@@ -123,3 +123,16 @@ func (mr *MockUserManagerMockRecorder) UpdateUserRole(ctx, userID, newRole inter
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUserRole", reflect.TypeOf((*MockUserManager)(nil).UpdateUserRole), ctx, userID, newRole)
 }
+
+func (m *MockUserManager) GetOrCreateUserFromSupabaseID(ctx context.Context, userID uuid.UUID, userEmail string) (*domain.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOrCreateUserFromSupabaseID", ctx, userID, userEmail)
+	ret0, _ := ret[0].(*domain.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockUserManagerMockRecorder) GetOrCreateUserFromSupabaseID(ctx, userID, userEmail interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOrCreateUserFromSupabaseID", reflect.TypeOf((*MockUserManager)(nil).GetOrCreateUserFromSupabaseID), ctx, userID, userEmail)
+}

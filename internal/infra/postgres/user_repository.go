@@ -21,7 +21,6 @@ type userModel struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Name      string    `gorm:"type:varchar(255);not null"`
 	Email     string    `gorm:"type:varchar(255);uniqueIndex;not null"`
-	Password  string    `gorm:"type:varchar(255);not null"`
 	Role      string    `gorm:"type:varchar(255);not null"`
 	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime"`
@@ -37,23 +36,21 @@ func (m *userModel) toDomain() *domain.User {
 		return nil
 	}
 	return &domain.User{
-		ID:       m.ID,
-		Name:     m.Name,
-		Email:    m.Email,
-		Password: m.Password,
-		Role:     m.Role,
-		Created:  m.CreatedAt,
-		Updated:  m.UpdatedAt,
+		ID:      m.ID,
+		Name:    m.Name,
+		Email:   m.Email,
+		Role:    m.Role,
+		Created: m.CreatedAt,
+		Updated: m.UpdatedAt,
 	}
 }
 
 // fromDomain creates a userModel from domain.User. It does not overwrite ID when it's zero.
 func fromDomain(u *domain.User) *userModel {
 	m := &userModel{
-		Name:     u.Name,
-		Email:    u.Email,
-		Password: u.Password,
-		Role:     u.Role,
+		Name:  u.Name,
+		Email: u.Email,
+		Role:  u.Role,
 	}
 	if u.ID != uuid.Nil {
 		m.ID = u.ID
@@ -124,10 +121,6 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *domain.User) erro
 	if m.Email != "" {
 		updates["email"] = m.Email
 	}
-	if m.Password != "" {
-		updates["password"] = m.Password
-	}
-
 	if err := r.db.WithContext(ctx).Model(&userModel{}).Where("id = ?", m.ID).Updates(updates).Error; err != nil {
 		return domain_errors.WrapUnexpectedMsg(err, "failed to update user")
 	}

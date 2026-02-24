@@ -2,18 +2,19 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
-
-	"github.com/labstack/gommon/log"
 )
 
 type Config struct {
 	Port               string
 	DBURL              string
-	JWTSecret          string
 	SupabaseURL        string
 	SupabaseServiceKey string
 	SupabaseBucket     string
+	SupabaseAnonKey    string
+	SupabaseJWTKX      string
+	SupabaseJWTKY      string
 }
 
 func Load() *Config {
@@ -28,20 +29,49 @@ func Load() *Config {
 		dbUser, dbPassword, dbHost, dbPort, dbName,
 	)
 
-	return &Config{
+	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
 		DBURL:              dbURL,
-		JWTSecret:          getEnv("JWT_SECRET", "secret-chave-muito-segura"),
 		SupabaseURL:        getEnv("SUPABASE_URL", ""),
 		SupabaseServiceKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
 		SupabaseBucket:     getEnv("SUPABASE_BUCKET", ""),
+		SupabaseAnonKey:    getEnv("SUPABASE_ANON_KEY", ""),
+		SupabaseJWTKX:      getEnv("SUPABASE_JWT_K_X", ""),
+		SupabaseJWTKY:      getEnv("SUPABASE_JWT_K_Y", ""),
 	}
+
+	validateRequired(cfg)
+
+	return cfg
 }
 
 func getEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
-	log.Info(fmt.Sprintf("Environment variable %s not set, using default value %s", key, defaultValue))
-	return defaultValue
+	if defaultValue != "" {
+		return defaultValue
+	}
+	return ""
+}
+
+func validateRequired(cfg *Config) {
+	required := map[string]string{
+		"SUPABASE_URL":      cfg.SupabaseURL,
+		"SUPABASE_JWT_K_X":  cfg.SupabaseJWTKX,
+		"SUPABASE_JWT_K_Y":  cfg.SupabaseJWTKY,
+		"SUPABASE_ANON_KEY": cfg.SupabaseAnonKey,
+		"DB_URL":            cfg.DBURL,
+	}
+
+	var missing []string
+	for name, value := range required {
+		if value == "" {
+			missing = append(missing, name)
+		}
+	}
+
+	if len(missing) > 0 {
+		log.Fatalf("Missing environment variables: %v", missing)
+	}
 }
