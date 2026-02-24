@@ -28,5 +28,5 @@ clean:
 	rm -f coverage.out coverage.html
 
 mockgen:
-	mockgen -source=internal/core/interfaces/iservice/auth_manager.go -destination=internal/api/handlers/mocks/mock_auth_manager.go -package=mocks
+	mockgen -source=internal/core/interfaces/iservice/lesson_plan_manager.go -destination=internal/api/handlers/mocks/mock_lesson_plan_manager.go -package=mocks
 	mockgen -source=internal/core/interfaces/iservice/user_manager.go -destination=internal/api/handlers/mocks/mock_user_manager.go -package=mocks
