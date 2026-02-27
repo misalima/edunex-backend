@@ -16,7 +16,7 @@ EduNex é uma aplicação web para coordenadores pedagógicos, que centraliza e 
 - Banco de dados: PostgreSQL
 - Armazenamento de arquivos: Supabase Storage
 - Frontend: Next.js (em desenvolvimento)
-- Autenticação: JWT
+- Autenticação: Supabase Auth - Validação via API do Supabase como fonte de verdade + Validação Local do JWT (ES256). 
 - Container de dependências com inicialização lazy e thread-safe
 
 ## Como Rodar o Projeto
