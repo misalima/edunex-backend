@@ -12,14 +12,15 @@ import (
 	"github.com/misalima/edunex-backend/internal/api/util"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/infra/security"
 )
 
 type UserHandler struct {
 	svc    iservice.UserManager
-	jwtSvc iservice.JWTManager
+	jwtSvc security.JWTManager
 }
 
-func NewUserHandler(svc iservice.UserManager, jwtSvc iservice.JWTManager) *UserHandler {
+func NewUserHandler(svc iservice.UserManager, jwtSvc security.JWTManager) *UserHandler {
 	return &UserHandler{svc: svc, jwtSvc: jwtSvc}
 }
 
