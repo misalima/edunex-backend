@@ -8,19 +8,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 )
 
-var _ iservice.UserManager = (*UserService)(nil)
+var _ primary.UserManager = (*UserService)(nil)
 
 type UserService struct {
-	userRepo irepository.UserLoader
+	userRepo secondary.UserLoader
 }
 
-var _ iservice.UserManager = (*UserService)(nil)
+var _ primary.UserManager = (*UserService)(nil)
 
-func NewUserService(userRepo irepository.UserLoader) *UserService {
+func NewUserService(userRepo secondary.UserLoader) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 	}

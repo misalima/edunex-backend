@@ -9,16 +9,16 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/response"
 	"github.com/misalima/edunex-backend/internal/core/domain"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
 	"go.uber.org/zap"
 )
 
 type LessonPlanHandler struct {
-	lessonPlanService iservice.LessonPlanManager
+	lessonPlanService primary.LessonPlanManager
 }
 
-func NewLessonPlanHandler(lessonPlanService iservice.LessonPlanManager) *LessonPlanHandler {
+func NewLessonPlanHandler(lessonPlanService primary.LessonPlanManager) *LessonPlanHandler {
 	return &LessonPlanHandler{lessonPlanService: lessonPlanService}
 }
 

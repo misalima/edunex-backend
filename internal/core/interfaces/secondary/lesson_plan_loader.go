@@ -1,4 +1,4 @@
-package irepository
+package secondary
 
 import (
 	"context"

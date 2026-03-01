@@ -8,25 +8,25 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 	"go.uber.org/zap"
 
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
 )
 
 const DefaultLinkExpiration = 3600
 
 type LessonPlanService struct {
-	repo    irepository.LessonPlanLoader
-	storage irepository.StorageUploader
+	repo    secondary.LessonPlanLoader
+	storage secondary.StorageClient
 }
 
-var _ iservice.LessonPlanManager = (*LessonPlanService)(nil)
+var _ primary.LessonPlanManager = (*LessonPlanService)(nil)
 
-func NewLessonPlanService(repo irepository.LessonPlanLoader, storage irepository.StorageUploader) *LessonPlanService {
+func NewLessonPlanService(repo secondary.LessonPlanLoader, storage secondary.StorageClient) *LessonPlanService {
 	return &LessonPlanService{
 		repo:    repo,
 		storage: storage,
