@@ -60,7 +60,7 @@ func (c *Container) GetJWTService() *security.JWTService {
 	return c.jwtService
 }
 
-func (c *Container) GetJWTManager() iservice.JWTManager {
+func (c *Container) GetJWTManager() security.JWTManager {
 	return c.GetJWTService()
 }
 
