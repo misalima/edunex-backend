@@ -11,16 +11,16 @@ import (
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/response"
 	"github.com/misalima/edunex-backend/internal/api/util"
 	"github.com/misalima/edunex-backend/internal/core/domain"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 	"github.com/misalima/edunex-backend/internal/infra/security"
 )
 
 type UserHandler struct {
-	svc    iservice.UserManager
-	jwtSvc security.JWTManager
+	svc    primary.UserManager
+	jwtSvc security.JWTValidator
 }
 
-func NewUserHandler(svc iservice.UserManager, jwtSvc security.JWTManager) *UserHandler {
+func NewUserHandler(svc primary.UserManager, jwtSvc security.JWTValidator) *UserHandler {
 	return &UserHandler{svc: svc, jwtSvc: jwtSvc}
 }
 

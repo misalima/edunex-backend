@@ -1,54 +1,115 @@
 # EduNex
 
-EduNex é uma aplicação web para coordenadores pedagógicos, que centraliza e facilita as tarefas do dia a dia, como acompanhamento de desempenho dos estudantes, gerenciamento de planos de aula e integração com inteligência artificial para apoio na tomada de decisão.
+EduNex is a platform I am building to **streamline my own workflow as a Pedagogical Coordinator**. By combining my background in education with backend development in Go, I am creating a central hub to reduce manual work, organize school data, and experiment with AI-supported pedagogical analysis.
 
-## Funcionalidades Principais
+## 🎯 Vision
 
-- Autenticação de usuários (coordenadores, professores, etc.)
-- Upload e gerenciamento de planos de aula com armazenamento em nuvem (Supabase)
-- Listagem e download seguro de planos via URLs assinadas
-- Integração futura com IA para análise de planos e desempenho acadêmico
-- Agenda integrada e acompanhamento de atividades (em desenvolvimento)
+In my day-to-day work as a coordinator, I deal with fragmented information (spreadsheets, PDFs, messages) and a lot of manual checking of lesson plans and student performance.
 
-## Tecnologias Utilizadas
+EduNex is my personal tool to:
 
-- Backend: Go (Golang) com arquitetura hexagonal
-- Banco de dados: PostgreSQL
-- Armazenamento de arquivos: Supabase Storage
-- Frontend: Next.js (em desenvolvimento)
-- Autenticação: Supabase Auth - Validação via API do Supabase como fonte de verdade + Validação Local do JWT (ES256). 
-- Container de dependências com inicialização lazy e thread-safe
+- Reduce time spent on repetitive coordination tasks.
+- Keep student and school data consistent and queryable.
+- Use AI to support lesson plan review and decision-making.
 
-## Como Rodar o Projeto
+## 🚀 Key Features (Current & Planned)
 
-2. Inicie o banco de dados PostgreSQL e execute o script `init.sql` para criar as tabelas.
+- **Authentication:** Supabase Auth integration with local JWT (ES256) validation.
+- **Lesson Plan Management:**
+    - Upload and storage of lesson plans in Supabase Buckets.
+    - Secure access via signed URLs for download and viewing.
+- **AI-Powered Analysis (Planned / In Progress):**
+    - Asynchronous job processing for lesson plan analysis.
+    - Text extraction from PDF/DOCX and LLM-based feedback.
+- **Coordinator Workflow (Planned):**
+    - Activity and agenda tracking focused on my coordination routines.
+    - Future modules for student performance and attendance tracking.
 
-3. Compile e rode o backend:
+## 🛠 Architecture & Tech Stack
 
+I am using this project to apply and refine my knowledge of **Hexagonal Architecture (Ports & Adapters)**, aiming to keep the pedagogical domain logic isolated from infrastructure details. You can find a detailed breakdown of the design and structure in the [**ARCHITECTURE.md**](./ARCHITECTURE.md) file.
+
+- **Backend:** Go (Golang), focusing on clean code and separation of concerns.
+- **Architecture:** Hexagonal (internal `core`, `api`, `infra` layout).
+- **Database:** PostgreSQL (with GORM) for structured pedagogical and school data.
+- **Cloud Storage:** Supabase Storage (Buckets) for lesson plan files.
+- **Authentication:** Supabase Auth with local JWT validation (ES256) and Supabase API as source of truth.
+- **Dependency Injection:** Custom, thread-safe lazy-loading container.
+- **Frontend:** Next.js (under development, separate repository).
+
+## 🏗 Project Structure (Backend)
+
+High-level structure of this repository:
+
+- `cmd/app` – Application entry point and configuration wiring.
+- `config/postgres/init.sql` – Database schema and extensions.
+- `internal/core` – Domain model, business rules, and Hexagonal ports (interfaces).
+- `internal/api` – HTTP handlers, DTOs, middleware, router, and DI container.
+- `internal/infra` – Infrastructure adapters (Postgres, Supabase Storage, security, logging).
+- `docs/` – Documentation (including sprint planning for the AI analysis pipeline).
+
+For a more detailed explanation of each layer and how they interact, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
+## 🚦 Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose
+- Go 1.21+ (if running locally)
+- Supabase project (Auth + Storage enabled)
+
+### Configuration
+
+1. **Environment Variables**
+   Copy the example environment file and fill in your Supabase credentials and database settings:
+   ```bash
+   cp .env.example .env
+   ```
+
+### Running the Project
+
+#### Option A: Full Docker Environment (Recommended)
+This will spin up both the PostgreSQL database and the Go API. The `init.sql` script will run automatically on the first startup to set up the schema.
 ```bash
-go run cmd/app/main.go
+docker compose up -d
 ```
 
-4. Use o Insomnia/Postman para testar os endpoints (ex: upload de planos, autenticação).
+#### Option B: Local API with Docker Database
+If you want to run the API locally for development/debugging while keeping the database in a container:
+1. Start only the database:
+   ```bash
+   docker compose up -d postgres
+   ```
+2. Run the API from the root:
+   ```bash
+   go run cmd/app/main.go
+   ```
 
-## Estrutura do Projeto
+### Testing Endpoints
 
-- `internal/core`: Domínio e regras de negócio
-- `internal/api`: Handlers, container e rotas
-- `internal/infra`: Infraestrutura (banco, storage, segurança)
-- `cmd/app`: Ponto de entrada da aplicação
+Use a tool like Insomnia/Postman to call the API. The default port is usually `:8080` (check your `.env`).
+- **Health Check:** `GET /health`
+- **Auth:** Login/Register via Supabase integration.
+- **Lesson Plans:** Upload and list pedagogical documents.
 
-## Próximos Passos
+## 📈 Roadmap (Backend Focus)
 
-- Desenvolvimento do frontend em Next.js
-- Implementação da análise de planos com IA
-- Expansão das funcionalidades de agenda e acompanhamento
+- [ ] **AI Analysis Pipeline**
+    - Asynchronous job processing for lesson plan analysis.
+    - Text extraction from PDF/DOCX and LLM-based feedback.
+- [ ] **Lesson Plan Analysis Storage**
+    - Persist structured AI output and human-readable feedback.
+- [ ] **Coordinator Dashboard API**
+    - Endpoints for activities, agenda, and school-level overviews.
+- [ ] **Student & Performance Module**
+    - APIs for students, classes, attendance, and performance data.
+- [ ] **Frontend Integration**
+    - Connect the Next.js frontend to the existing backend APIs.
 
-## Contato
+## 📬 Contact
 
-Para dúvidas ou contribuições, entre em contato: misael.alisson14@gmail.com
+Developed by **Misael Lima**
+Pedagogical Coordinator & Backend Developer
+📧 [misael.alisson14@gmail.com](mailto:misael.alisson14@gmail.com)
 
 ---
-
-EduNex © 2026 - Projeto pessoal de coordenação pedagógica
-```

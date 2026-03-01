@@ -8,13 +8,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-var _ irepository.LessonPlanLoader = (*LessonPlanRepository)(nil)
+var _ secondary.LessonPlanLoader = (*LessonPlanRepository)(nil)
 
 type lessonPlanModel struct {
 	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`

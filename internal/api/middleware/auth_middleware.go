@@ -8,7 +8,7 @@ import (
 	"github.com/misalima/edunex-backend/internal/infra/security"
 )
 
-func AuthMiddleware(jwtService security.JWTManager) echo.MiddlewareFunc {
+func AuthMiddleware(jwtService security.JWTValidator) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")

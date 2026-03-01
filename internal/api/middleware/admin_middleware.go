@@ -5,10 +5,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 )
 
-func AdminOnly(svc iservice.UserManager) echo.MiddlewareFunc {
+func AdminOnly(svc primary.UserManager) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			userIDStr, ok := c.Get("user_id").(string)

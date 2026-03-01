@@ -1,4 +1,4 @@
-package iservice
+package secondary
 
 import (
 	"context"
@@ -7,12 +7,11 @@ import (
 	"github.com/misalima/edunex-backend/internal/core/domain"
 )
 
-type UserManager interface {
-	CreateUser(ctx context.Context, user *domain.User) (*domain.User, error)
+type UserLoader interface {
+	InsertUser(ctx context.Context, user *domain.User) (uuid.UUID, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*domain.User, error)
 	UpdateUser(ctx context.Context, user *domain.User) error
 	ListUsers(ctx context.Context) ([]*domain.User, error)
-	UpdateUserRole(ctx context.Context, userID uuid.UUID, newRole string) error
-	GetOrCreateUserFromSupabaseID(ctx context.Context, userID uuid.UUID, userEmail string) (*domain.User, error)
+	UpdateRole(ctx context.Context, userID uuid.UUID, role string) error
 }
