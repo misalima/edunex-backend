@@ -6,12 +6,17 @@ EduNex is a web platform designed for pedagogical coordinators to centralize sch
 ## 2. Project Structure and Encapsulation
 The backend is entirely contained within the `internal/` directory to prevent external packages from importing private logic, following Go’s idiomatic conventions. The system is divided into three main pillars: `core` for business logic, `api` for request handling, and `infra` for external integrations.
 
+### Hexagonal Diagram:
+![EduNex](https://github.com/user-attachments/assets/b89b01da-86c2-4dc0-b96a-56c3a0bfdc6b)
+
+
+
 ### The Application Core (`internal/core`)
 The `core` is the heart of the application and contains the domain model and use cases. It is strictly decoupled from any specific technology, such as HTTP or SQL.
 
 *   **Domain Entities:** Located in `internal/core/entities`, these are pure Go structs representing pedagogical concepts like `User` and `LessonPlan`.
 *   **Domain Services:** Found in `internal/core/services`, they implement the actual business workflows, such as processing lesson plan uploads and coordinating AI analysis.
-*   **Ports:** The core defines its boundaries through interfaces. **Primary Ports** (`iservice`) define what the core offers to the outside world, while **Secondary Ports** (`irepository`) define what the core requires from external systems, such as persistence or file storage.
+*   **Ports:** The core defines its boundaries through interfaces. **Primary Ports** (`iservice`) define what the core offers to the outside world, while **Secondary Ports** (`irepository`) define what the core requires from external systems, such as persistence, file storage and soon LLM processing.
 
 ### Driving Adapters (`internal/api`)
 The `api` layer serves as the entry point for the application, exposing its functionality via HTTP. It is responsible for request/response marshalling and applying cross-cutting concerns. The **HTTP Handlers** within this layer translate incoming requests into calls to the Core's primary ports. A critical component here is the **Auth Middleware**, which intercepts requests to validate identity. It extracts the authenticated `UserID` and injects it into the Go `context.Context`, allowing the Core to execute business logic without being aware of the underlying authentication mechanism.
