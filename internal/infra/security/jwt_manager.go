@@ -1,4 +1,4 @@
-package iservice
+package security
 
 import "github.com/misalima/edunex-backend/internal/core/util"
 
