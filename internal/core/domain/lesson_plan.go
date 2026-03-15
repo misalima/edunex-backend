@@ -7,10 +7,14 @@ import (
 )
 
 type LessonPlan struct {
-	ID       uuid.UUID
-	UserID   uuid.UUID
-	Title    string
-	FilePath string
-	Status   string
-	Created  time.Time
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	Title            string
+	FilePath         string
+	Teacher          *string
+	Discipline       *string
+	GradeLevel       *GradeLevel
+	Status           LessonPlanStatus
+	ProcessingStatus ProcessingStatus
+	CreatedAt        time.Time
 }

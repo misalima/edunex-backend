@@ -7,18 +7,18 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/misalima/edunex-backend/internal/api/handlers/dto/request"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/response"
-	"github.com/misalima/edunex-backend/internal/core/domain"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
 	"go.uber.org/zap"
 )
 
 type LessonPlanHandler struct {
-	lessonPlanService iservice.LessonPlanManager
+	lessonPlanService primary.LessonPlanManager
 }
 
-func NewLessonPlanHandler(lessonPlanService iservice.LessonPlanManager) *LessonPlanHandler {
+func NewLessonPlanHandler(lessonPlanService primary.LessonPlanManager) *LessonPlanHandler {
 	return &LessonPlanHandler{lessonPlanService: lessonPlanService}
 }
 
@@ -55,10 +55,14 @@ func (h *LessonPlanHandler) Create(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 	}
 
-	lpDomain := &domain.LessonPlan{
-		UserID: userID,
-		Title:  title,
+	req := &request.CreateLessonPlanRequest{
+		Title:      title,
+		Teacher:    c.FormValue("teacher"),
+		Discipline: c.FormValue("discipline"),
+		GradeLevel: c.FormValue("grade_level"),
 	}
+
+	lpDomain := req.ToDomain(userID)
 
 	created, err := h.lessonPlanService.CreateLessonPlan(ctx, lpDomain, file, fileHeader.Filename, fileHeader.Header.Get("Content-Type"))
 	if err != nil {

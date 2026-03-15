@@ -6,7 +6,7 @@ import (
 
 	"github.com/misalima/edunex-backend/cmd/app/config"
 	"github.com/misalima/edunex-backend/internal/api/handlers"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/iservice"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 	"github.com/misalima/edunex-backend/internal/core/services"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
 	"github.com/misalima/edunex-backend/internal/infra/security"
@@ -60,7 +60,7 @@ func (c *Container) GetJWTService() *security.JWTService {
 	return c.jwtService
 }
 
-func (c *Container) GetJWTManager() iservice.JWTManager {
+func (c *Container) GetJWTManager() security.JWTValidator {
 	return c.GetJWTService()
 }
 
@@ -72,7 +72,7 @@ func (c *Container) GetUserService() *services.UserService {
 	return c.userService
 }
 
-func (c *Container) GetUserManager() iservice.UserManager {
+func (c *Container) GetUserManager() primary.UserManager {
 	return c.GetUserService()
 }
 

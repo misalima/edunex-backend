@@ -8,21 +8,24 @@ import (
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
-var _ irepository.LessonPlanLoader = (*LessonPlanRepository)(nil)
+var _ secondary.LessonPlanLoader = (*LessonPlanRepository)(nil)
 
 type lessonPlanModel struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	UserID    uuid.UUID `gorm:"type:uuid;not null;index:idx_lesson_plans_user_id"`
-	Title     string    `gorm:"type:text;not null"`
-	FilePath  string    `gorm:"type:text;not null"`
-	Status    string    `gorm:"type:varchar(50);not null;default:'pending'"`
-	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime"`
+	ID         uuid.UUID               `gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	UserID     uuid.UUID               `gorm:"type:uuid;not null;index:idx_lesson_plans_user_id"`
+	Title      string                  `gorm:"type:text;not null"`
+	FilePath   string                  `gorm:"type:text;not null"`
+	Teacher    *string                 `gorm:"type:text"`
+	Discipline *string                 `gorm:"type:text"`
+	GradeLevel *domain.GradeLevel      `gorm:"type:varchar(50)"`
+	Status     domain.LessonPlanStatus `gorm:"type:lesson_plan_status;not null;default:'pending'"`
+	CreatedAt  time.Time               `gorm:"column:created_at;autoCreateTime"`
 }
 
 func (lessonPlanModel) TableName() string {
@@ -34,12 +37,15 @@ func (m *lessonPlanModel) toDomain() *domain.LessonPlan {
 		return nil
 	}
 	return &domain.LessonPlan{
-		ID:       m.ID,
-		UserID:   m.UserID,
-		Title:    m.Title,
-		FilePath: m.FilePath,
-		Status:   m.Status,
-		Created:  m.CreatedAt,
+		ID:         m.ID,
+		UserID:     m.UserID,
+		Title:      m.Title,
+		FilePath:   m.FilePath,
+		GradeLevel: m.GradeLevel,
+		Teacher:    m.Teacher,
+		Discipline: m.Discipline,
+		Status:     m.Status,
+		CreatedAt:  m.CreatedAt,
 	}
 }
 
@@ -48,16 +54,19 @@ func fromDomainLessonPlan(lp *domain.LessonPlan) *lessonPlanModel {
 		return nil
 	}
 	m := &lessonPlanModel{
-		UserID:   lp.UserID,
-		Title:    lp.Title,
-		FilePath: lp.FilePath,
-		Status:   lp.Status,
+		UserID:     lp.UserID,
+		Title:      lp.Title,
+		FilePath:   lp.FilePath,
+		GradeLevel: lp.GradeLevel,
+		Teacher:    lp.Teacher,
+		Discipline: lp.Discipline,
+		Status:     lp.Status,
 	}
 	if lp.ID != uuid.Nil {
 		m.ID = lp.ID
 	}
-	if !lp.Created.IsZero() {
-		m.CreatedAt = lp.Created
+	if !lp.CreatedAt.IsZero() {
+		m.CreatedAt = lp.CreatedAt
 	}
 	return m
 }

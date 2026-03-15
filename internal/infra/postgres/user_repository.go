@@ -8,12 +8,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
-	"github.com/misalima/edunex-backend/internal/core/interfaces/irepository"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 	"gorm.io/gorm"
 )
 
 // ensure UserRepository implements the UserLoader interface
-var _ irepository.UserLoader = (*UserRepository)(nil)
+var _ secondary.UserLoader = (*UserRepository)(nil)
 
 // userModel maps to the users table and contains GORM tags.
 // We keep domain.User free of GORM tags per hexagonal architecture.

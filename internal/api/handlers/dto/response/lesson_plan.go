@@ -10,6 +10,9 @@ type LessonPlanResponse struct {
 	ID          string    `json:"id"`
 	UserID      string    `json:"user_id"`
 	Title       string    `json:"title"`
+	Teacher     string    `json:"teacher,omitempty"`
+	GradeLevel  string    `json:"grade_level,omitempty"`
+	Discipline  string    `json:"discipline,omitempty"`
 	Status      string    `json:"status"`
 	CreatedAt   time.Time `json:"created_at"`
 	DownloadURL string    `json:"download_url,omitempty"`
@@ -20,11 +23,14 @@ func FromDomainLessonPlanToResponse(lp *domain.LessonPlan) *LessonPlanResponse {
 		return nil
 	}
 	return &LessonPlanResponse{
-		ID:        lp.ID.String(),
-		UserID:    lp.UserID.String(),
-		Title:     lp.Title,
-		Status:    lp.Status,
-		CreatedAt: lp.Created,
+		ID:         lp.ID.String(),
+		UserID:     lp.UserID.String(),
+		Title:      lp.Title,
+		Teacher:    derefString(lp.Teacher),
+		GradeLevel: derefGradeLevel(lp.GradeLevel),
+		Discipline: derefString(lp.Discipline),
+		Status:     string(lp.Status),
+		CreatedAt:  lp.CreatedAt,
 	}
 }
 
@@ -72,4 +78,18 @@ func FromDomainLessonPlanListWithURLs(lps []*domain.LessonPlan, urls map[string]
 		out = append(out, dto)
 	}
 	return out
+}
+
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+func derefGradeLevel(gl *domain.GradeLevel) string {
+	if gl == nil {
+		return ""
+	}
+	return string(*gl)
 }
