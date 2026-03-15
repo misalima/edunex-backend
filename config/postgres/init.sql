@@ -63,9 +63,9 @@ CREATE TYPE job_status_enum AS ENUM (
     );
 
 CREATE TYPE lesson_plan_status AS ENUM (
-    'PENDING',
-    'APPROVED',
-    'NEEDS_ADJUSTMENT'
+    'pending',
+    'approved',
+    'needs_adjustment'
     );
 
 -- =====================================================
@@ -334,7 +334,7 @@ CREATE TABLE lesson_plans
 
     grade_level TEXT,
 
-    status     lesson_plan_status NOT NULL DEFAULT 'PENDING',
+    status     lesson_plan_status NOT NULL DEFAULT 'pending',
 
     created_at TIMESTAMP        DEFAULT now(),
 
