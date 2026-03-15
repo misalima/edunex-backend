@@ -62,6 +62,12 @@ CREATE TYPE job_status_enum AS ENUM (
     'failed'
     );
 
+CREATE TYPE lesson_plan_status AS ENUM (
+    'pending',
+    'approved',
+    'needs_adjustment'
+    );
+
 -- =====================================================
 -- CORE TABLES
 -- =====================================================
@@ -321,6 +327,14 @@ CREATE TABLE lesson_plans
     title      TEXT NOT NULL,
 
     file_path  TEXT NOT NULL,
+
+    teacher    TEXT,
+
+    discipline TEXT,
+
+    grade_level TEXT,
+
+    status     lesson_plan_status NOT NULL DEFAULT 'pending',
 
     created_at TIMESTAMP        DEFAULT now(),
 

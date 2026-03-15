@@ -1,7 +1,7 @@
 ## Sprint: AI-Powered Lesson Plan Analysis
 **Sprint Goal:** Implement a pedagogical analysis pipeline using LLMs.
 **Sprint Start:** March 1, 2026 \
-**Sprint End:** March 14, 2026
+**Sprint End:** March 21, 2026
 
 #### 1. Objective
 Implement an asynchronous data pipeline to extract, structure, and analyze pedagogical content from uploaded lesson plans (PDF/DOCX) using LLM integration.
