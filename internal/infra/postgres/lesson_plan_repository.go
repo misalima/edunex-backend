@@ -21,6 +21,7 @@ type lessonPlanModel struct {
 	UserID     uuid.UUID               `gorm:"type:uuid;not null;index:idx_lesson_plans_user_id"`
 	Title      string                  `gorm:"type:text;not null"`
 	FilePath   string                  `gorm:"type:text;not null"`
+	RawContent *string                 `gorm:"type:text"`
 	Teacher    *string                 `gorm:"type:text"`
 	Discipline *string                 `gorm:"type:text"`
 	GradeLevel *domain.GradeLevel      `gorm:"type:varchar(50)"`
@@ -41,6 +42,7 @@ func (m *lessonPlanModel) toDomain() *domain.LessonPlan {
 		UserID:     m.UserID,
 		Title:      m.Title,
 		FilePath:   m.FilePath,
+		RawContent: m.RawContent,
 		GradeLevel: m.GradeLevel,
 		Teacher:    m.Teacher,
 		Discipline: m.Discipline,
@@ -57,6 +59,7 @@ func fromDomainLessonPlan(lp *domain.LessonPlan) *lessonPlanModel {
 		UserID:     lp.UserID,
 		Title:      lp.Title,
 		FilePath:   lp.FilePath,
+		RawContent: lp.RawContent,
 		GradeLevel: lp.GradeLevel,
 		Teacher:    lp.Teacher,
 		Discipline: lp.Discipline,

@@ -328,6 +328,8 @@ CREATE TABLE lesson_plans
 
     file_path  TEXT NOT NULL,
 
+    raw_content TEXT,
+
     teacher    TEXT,
 
     discipline TEXT,
