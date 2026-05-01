@@ -27,7 +27,7 @@ EduNex is my personal tool to:
 
 ## 🛠 Architecture & Tech Stack
 
-I am using this project to apply and refine my knowledge of **Hexagonal Architecture (Ports & Adapters)**, aiming to keep the pedagogical domain logic isolated from infrastructure details. You can find a detailed breakdown of the design and structure in the [**ARCHITECTURE.md**](./ARCHITECTURE.md) file.
+I am using this project to apply and refine my knowledge of **Hexagonal Architecture (Ports & Adapters)**, aiming to keep the pedagogical domain logic isolated from infrastructure details. You can find a detailed breakdown of the design and structure in the [**ARCHITECTURE.md**](docs/architecture/ARCHITECTURE.md) file.
 
 - **Backend:** Go (Golang), focusing on clean code and separation of concerns.
 - **Architecture:** Hexagonal (internal `core`, `api`, `infra` layout).
@@ -48,7 +48,7 @@ High-level structure of this repository:
 - `internal/infra` – Infrastructure adapters (Postgres, Supabase Storage, security, logging).
 - `docs/` – Documentation (including sprint planning for the AI analysis pipeline).
 
-For a more detailed explanation of each layer and how they interact, see [ARCHITECTURE.md](./ARCHITECTURE.md).
+For a more detailed explanation of each layer and how they interact, see [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md).
 
 ## 🚦 Getting Started
 
