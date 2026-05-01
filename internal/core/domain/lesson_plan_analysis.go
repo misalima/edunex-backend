@@ -37,7 +37,7 @@ type AnalysisResult struct {
 type LessonPlanAnalysis struct {
 	ID             uuid.UUID
 	LessonPlanID   uuid.UUID
-	AnalysisText   *string         // raw JSON string returned by the LLM (for audit/debug)
-	StructuredData *AnalysisResult // parsed structured representation
+	AnalysisText   string         // raw JSON string returned by the LLM (for audit/debug)
+	StructuredData AnalysisResult // parsed structured representation
 	CreatedAt      time.Time
 }
