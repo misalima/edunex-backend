@@ -382,6 +382,8 @@ CREATE TABLE lesson_plan_analyses
 
     analysis_text  TEXT NOT NULL,
 
+    structured_data JSONB NOT NULL,
+
     created_at     TIMESTAMP        DEFAULT now(),
 
     FOREIGN KEY (lesson_plan_id)
