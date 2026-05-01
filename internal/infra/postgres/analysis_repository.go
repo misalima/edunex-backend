@@ -11,6 +11,7 @@ import (
 	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 	pgmodels "github.com/misalima/edunex-backend/internal/infra/postgres/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 var _ secondary.AnalysisJobRepository = (*AnalysisRepository)(nil)
@@ -64,21 +65,55 @@ func (r *AnalysisRepository) ClaimPendingJobs(ctx context.Context, limit int) ([
 		limit = 10
 	}
 
-	var models []pgmodels.AnalysisJobModel
-	if err := r.db.WithContext(ctx).
-		Where("status = ?", domain.JobPending).
-		Order("created_at asc").
-		Limit(limit).
-		Find(&models).Error; err != nil {
-		return nil, domain_errors.WrapUnexpectedMsg(err, "failed to claim pending analysis jobs")
+	var claimedJobs []*domain.AnalysisJob
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Step 1: Fetch pending jobs with row-level lock
+		var models []pgmodels.AnalysisJobModel
+		if err := tx.WithContext(ctx).
+			Where("status = ?", domain.JobPending).
+			Order("created_at asc").
+			Limit(limit).
+			Clauses(clause.Locking{Strength: "UPDATE", Options: "SKIP LOCKED"}).
+			Find(&models).Error; err != nil {
+			return domain_errors.WrapUnexpectedMsg(err, "failed to fetch pending analysis jobs")
+		}
+
+		if len(models) == 0 {
+			return nil
+		}
+
+		// Step 2: Claim jobs by updating status to processing
+		res := tx.WithContext(ctx).
+			Model(&pgmodels.AnalysisJobModel{}).
+			Where("id IN ?", extractIDs(models)).
+			Update("status", domain.JobProcessing)
+		if res.Error != nil {
+			return domain_errors.WrapUnexpectedMsg(res.Error, "failed to update analysis job status")
+		}
+
+		// Step 3: Convert claimed models to domain objects
+		claimedJobs = make([]*domain.AnalysisJob, len(models))
+		for i := range models {
+			claimedJobs[i] = (&models[i]).ToDomain()
+			claimedJobs[i].Status = domain.JobProcessing
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 
-	out := make([]*domain.AnalysisJob, len(models))
+	return claimedJobs, nil
+}
+
+func extractIDs(models []pgmodels.AnalysisJobModel) []uuid.UUID {
+	ids := make([]uuid.UUID, len(models))
 	for i := range models {
-		out[i] = (&models[i]).ToDomain()
+		ids[i] = models[i].ID
 	}
-
-	return out, nil
+	return ids
 }
 
 func (r *AnalysisRepository) MarkJobProcessing(ctx context.Context, jobID uuid.UUID, startedAt time.Time) error {

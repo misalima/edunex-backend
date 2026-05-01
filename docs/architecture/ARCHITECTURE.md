@@ -100,3 +100,11 @@ Authentication is treated as an infrastructure utility. The Core does not depend
 
 **ADR-05 — Asynchronous AI Processing**
 Implemented a job queue table (`analysis_jobs`) to handle AI analysis asynchronously. This prevents long-running AI requests from blocking the HTTP response, improving user experience and system reliability.
+
+**ADR-06 — Job Claiming with Pessimistic Locking**
+Implemented `ClaimPendingJobs` using `SELECT FOR UPDATE SKIP LOCKED` within a transaction to safely support multiple concurrent workers. This strategy:
+- Locks rows atomically during selection, preventing other workers from claiming the same job.
+- Uses `SKIP LOCKED` to allow workers to skip contended rows and process non-contended ones immediately.
+- Returns only genuinely claimed jobs, avoiding duplicate processing across workers.
+- Maintains FIFO ordering (by `created_at`) to ensure fair job distribution.
+This design provides Thread-Safe job claiming without high lock contention, making it suitable for horizontal scaling of the analysis worker.
