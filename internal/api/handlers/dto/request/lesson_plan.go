@@ -6,10 +6,10 @@ import (
 )
 
 type CreateLessonPlanRequest struct {
-	Title      string `json:"title" form:"title"`
-	Teacher    string `json:"teacher" form:"teacher"`
-	Discipline string `json:"discipline" form:"discipline"`
-	GradeLevel string `json:"grade_level" form:"grade_level"`
+	Title      string `json:"title" form:"title" example:"Plano de aula de Matemática"`
+	Teacher    string `json:"teacher" form:"teacher" example:"Ana Paula"`
+	Discipline string `json:"discipline" form:"discipline" example:"Matemática"`
+	GradeLevel string `json:"grade_level" form:"grade_level" example:"1ª SÉRIE"`
 }
 
 func (r *CreateLessonPlanRequest) ToDomain(userID uuid.UUID) *domain.LessonPlan {

@@ -23,7 +23,7 @@ func AdminOnly(svc primary.UserManager) echo.MiddlewareFunc {
 			ctx := c.Request().Context()
 			user, err := svc.GetUserByID(ctx, userID)
 			if err != nil {
-				return c.JSON(http.StatusForbidden, map[string]string{"error": "failed to get user"})
+				return c.JSON(http.StatusForbidden, map[string]string{"error": "failed to fetch user"})
 			}
 
 			if !user.IsAdmin() {

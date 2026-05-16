@@ -19,9 +19,9 @@ import (
 )
 
 var (
-	ErrInvalidToken  = errors.New("token inválido")
-	ErrExpiredToken  = errors.New("token expirado")
-	ErrInvalidClaims = errors.New("claims inválidos")
+	ErrInvalidToken  = errors.New("invalid token")
+	ErrExpiredToken  = errors.New("token expired")
+	ErrInvalidClaims = errors.New("invalid claims")
 )
 
 type JWTService struct {
@@ -34,11 +34,11 @@ type JWTService struct {
 func NewJWTService(xBase64, yBase64, issuer, supabaseURL, anonKey string) (*JWTService, error) {
 	xBytes, err := base64.RawURLEncoding.DecodeString(xBase64)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding X: %w", err)
+		return nil, fmt.Errorf("error decoding X coordinate: %w", err)
 	}
 	yBytes, err := base64.RawURLEncoding.DecodeString(yBase64)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding Y: %w", err)
+		return nil, fmt.Errorf("error decoding Y coordinate: %w", err)
 	}
 
 	pubKey := &ecdsa.PublicKey{
@@ -58,7 +58,7 @@ func NewJWTService(xBase64, yBase64, issuer, supabaseURL, anonKey string) (*JWTS
 func (s *JWTService) ValidateToken(tokenString string) (*util.TokenClaims, error) {
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodECDSA); !ok {
-			return nil, fmt.Errorf("expected method: %v", t.Header["alg"])
+			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return s.publicKey, nil
 	})
@@ -105,7 +105,7 @@ func (s *JWTService) ValidateTokenViaAPI(tokenString string) (*util.TokenClaims,
 		}
 	}(resp.Body)
 	if err != nil || resp.StatusCode != 200 {
-		return nil, errors.New("token inválido ou usuário revogado")
+		return nil, errors.New("invalid token or revoked user")
 	}
 
 	var user struct {
