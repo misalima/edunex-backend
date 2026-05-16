@@ -15,6 +15,9 @@ type Config struct {
 	SupabaseAnonKey    string
 	SupabaseJWTKX      string
 	SupabaseJWTKY      string
+	GroqAPIKey         string
+	GroqAPIURL         string
+	GroqModel          string
 }
 
 func Load() *Config {
@@ -38,6 +41,9 @@ func Load() *Config {
 		SupabaseAnonKey:    getEnv("SUPABASE_ANON_KEY", ""),
 		SupabaseJWTKX:      getEnv("SUPABASE_JWT_K_X", ""),
 		SupabaseJWTKY:      getEnv("SUPABASE_JWT_K_Y", ""),
+		GroqAPIKey:         getEnv("GROQ_API_KEY", ""),
+		GroqAPIURL:         getEnv("GROQ_API_URL", ""),
+		GroqModel:          getEnv("GROQ_MODEL", ""),
 	}
 
 	validateRequired(cfg)
@@ -62,6 +68,7 @@ func validateRequired(cfg *Config) {
 		"SUPABASE_JWT_K_Y":  cfg.SupabaseJWTKY,
 		"SUPABASE_ANON_KEY": cfg.SupabaseAnonKey,
 		"DB_URL":            cfg.DBURL,
+		"GROQ_API_KEY":      cfg.GroqAPIKey,
 	}
 
 	var missing []string
