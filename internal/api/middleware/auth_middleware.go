@@ -13,12 +13,12 @@ func AuthMiddleware(jwtService security.JWTValidator) echo.MiddlewareFunc {
 		return func(c echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "token não fornecido"})
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "token not provided"})
 			}
 
 			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 			if tokenString == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "formato do token inválido"})
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token format"})
 			}
 
 			claims, err := jwtService.ValidateToken(tokenString)

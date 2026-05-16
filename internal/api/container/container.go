@@ -53,7 +53,7 @@ func (c *Container) GetJWTService() *security.JWTService {
 			c.cfg.SupabaseAnonKey,
 		)
 		if err != nil {
-			panic(fmt.Sprintf("Falha ao iniciar JWT Service: %v", err))
+			panic(fmt.Sprintf("failed to initialize JWT service: %v", err))
 		}
 		c.jwtService = svc
 	})
@@ -78,7 +78,7 @@ func (c *Container) GetUserManager() primary.UserManager {
 
 func (c *Container) GetStorageClient() *supabase.Client {
 	c.storageOnce.Do(func() {
-		// Usa o cfg em vez de os.Getenv
+		// Use cfg instead of os.Getenv
 		if c.cfg.SupabaseURL == "" || c.cfg.SupabaseServiceKey == "" || c.cfg.SupabaseBucket == "" {
 			panic("supabase configuration is missing (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET)")
 		}

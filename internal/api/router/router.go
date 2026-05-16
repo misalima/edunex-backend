@@ -4,9 +4,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/misalima/edunex-backend/internal/api/container"
 	"github.com/misalima/edunex-backend/internal/api/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger" // echo-swagger middleware (alias)
 )
 
 func RegisterRoutes(e *echo.Echo, c *container.Container) {
+	// Rota do Swagger UI
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
 	// Rotas públicas
 	e.GET("/health", c.GetHealthHandler().HealthHandler)
 
