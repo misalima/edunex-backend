@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
@@ -20,16 +21,18 @@ import (
 const DefaultLinkExpiration = 3600
 
 type LessonPlanService struct {
-	repo    secondary.LessonPlanLoader
-	storage secondary.StorageClient
+	repo     secondary.LessonPlanLoader
+	storage  secondary.StorageClient
+	enqueuer secondary.AnalysisJobEnqueuer
 }
 
 var _ primary.LessonPlanManager = (*LessonPlanService)(nil)
 
-func NewLessonPlanService(repo secondary.LessonPlanLoader, storage secondary.StorageClient) *LessonPlanService {
+func NewLessonPlanService(repo secondary.LessonPlanLoader, storage secondary.StorageClient, enqueuer secondary.AnalysisJobEnqueuer) *LessonPlanService {
 	return &LessonPlanService{
-		repo:    repo,
-		storage: storage,
+		repo:     repo,
+		storage:  storage,
+		enqueuer: enqueuer,
 	}
 }
 
@@ -77,6 +80,24 @@ func (s *LessonPlanService) CreateLessonPlan(ctx context.Context, lp *domain.Les
 	if err != nil {
 		logger.Log.Error("failed to fetch created lesson plan", zap.Error(err), zap.String("lesson_plan_id", id.String()))
 		return nil, err
+	}
+
+	if s.enqueuer != nil {
+		enqueueCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if jobID, err := s.enqueuer.Enqueue(enqueueCtx, createdLP.ID); err != nil {
+			logger.Log.Error("failed to enqueue lesson plan analysis",
+				zap.Error(err),
+				zap.String("lesson_plan_id", createdLP.ID.String()))
+		} else {
+			logger.Log.Info("lesson plan analysis enqueued",
+				zap.String("lesson_plan_id", createdLP.ID.String()),
+				zap.String("job_id", jobID.String()))
+		}
+	} else {
+		logger.Log.Warn("lesson plan analysis enqueuer not configured",
+			zap.String("lesson_plan_id", createdLP.ID.String()))
 	}
 
 	logger.Log.Info("lesson plan created", zap.String("lesson_plan_id", createdLP.ID.String()), zap.String("user_id", createdLP.UserID.String()), zap.String("access_url", uploadedURL))

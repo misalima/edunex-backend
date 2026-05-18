@@ -57,10 +57,16 @@ func main() {
 		log.Fatalf("failed to get sql.DB from gorm.DB: %v", err)
 	}
 
+	ctn := container.NewContainer(db, cfg)
+
+	jobManager := ctn.GetJobManager()
+	if err := jobManager.Start(); err != nil {
+		log.Fatalf("failed to start job manager: %v", err)
+	}
+
 	e := echo.New()
 	setupMiddleware(e)
 
-	ctn := container.NewContainer(db, cfg)
 	router.RegisterRoutes(e, ctn)
 
 	log.Printf("Server starting at port %s", cfg.Port)
@@ -76,6 +82,10 @@ func main() {
 	<-quit
 
 	log.Print("Starting graceful shutdown...")
+
+	if err := jobManager.Stop(); err != nil {
+		log.Printf("error stopping job manager: %v", err)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()

@@ -8,7 +8,10 @@ import (
 	"github.com/misalima/edunex-backend/internal/api/handlers"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 	"github.com/misalima/edunex-backend/internal/core/services"
+	"github.com/misalima/edunex-backend/internal/infra/ai"
+	"github.com/misalima/edunex-backend/internal/infra/extractor"
 	"github.com/misalima/edunex-backend/internal/infra/postgres"
+	"github.com/misalima/edunex-backend/internal/infra/queue"
 	"github.com/misalima/edunex-backend/internal/infra/security"
 	supabase "github.com/misalima/edunex-backend/internal/infra/storage"
 	"gorm.io/gorm"
@@ -36,6 +39,18 @@ type Container struct {
 
 	lessonPlanOnce    sync.Once
 	lessonPlanHandler *handlers.LessonPlanHandler
+
+	aiProviderOnce sync.Once
+	aiProvider     *ai.GroqClient
+
+	extractorOnce sync.Once
+	extractor     *extractor.Extractor
+
+	jobManagerOnce sync.Once
+	jobManager     *queue.JobManager
+
+	analysisJobHdlOnce sync.Once
+	analysisJobHdl     *handlers.AnalysisJobHandler
 }
 
 func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
@@ -111,8 +126,59 @@ func (c *Container) GetLessonPlanHandler() *handlers.LessonPlanHandler {
 	c.lessonPlanOnce.Do(func() {
 		lpRepo := postgres.NewLessonPlanRepository(c.db)
 		storage := c.GetStorageClient()
-		lpSvc := services.NewLessonPlanService(lpRepo, storage)
+		lpSvc := services.NewLessonPlanService(lpRepo, storage, c.GetJobManager())
 		c.lessonPlanHandler = handlers.NewLessonPlanHandler(lpSvc)
 	})
 	return c.lessonPlanHandler
+}
+
+func (c *Container) GetAIProvider() *ai.GroqClient {
+	c.aiProviderOnce.Do(func() {
+		if c.cfg.GroqAPIKey == "" {
+			panic("GROQ_API_KEY is required")
+		}
+		c.aiProvider = ai.NewGroqClientWithURL(
+			c.cfg.GroqAPIKey,
+			c.cfg.GroqModel,
+			c.cfg.GroqAPIURL,
+		)
+	})
+	return c.aiProvider
+}
+
+func (c *Container) GetExtractor() *extractor.Extractor {
+	c.extractorOnce.Do(func() {
+		storageClient := c.GetStorageClient()
+		c.extractor = extractor.NewExtractorWithStorage(storageClient)
+	})
+	return c.extractor
+}
+
+func (c *Container) GetJobManager() *queue.JobManager {
+	c.jobManagerOnce.Do(func() {
+		cfg := queue.DefaultJobManagerConfig()
+		aiProvider := c.GetAIProvider()
+		dataExtractor := c.GetExtractor()
+		lessonPlanRepo := postgres.NewLessonPlanRepository(c.db)
+		analysisRepo := postgres.NewLessonPlanAnalysisRepository(c.db)
+
+		c.jobManager = queue.NewJobManager(
+			c.db,
+			c.cfg.DBURL,
+			cfg,
+			aiProvider,
+			dataExtractor,
+			lessonPlanRepo,
+			analysisRepo,
+		)
+	})
+	return c.jobManager
+}
+
+func (c *Container) GetAnalysisJobHandler() *handlers.AnalysisJobHandler {
+	c.analysisJobHdlOnce.Do(func() {
+		jobManager := c.GetJobManager()
+		c.analysisJobHdl = handlers.NewAnalysisJobHandler(jobManager)
+	})
+	return c.analysisJobHdl
 }

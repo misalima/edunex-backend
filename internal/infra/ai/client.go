@@ -36,13 +36,22 @@ var _ secondary.AIProvider = (*GroqClient)(nil)
 
 // NewGroqClient builds a GroqClient with default timeout and input limits.
 func NewGroqClient(apiKey, model string) *GroqClient {
+	return NewGroqClientWithURL(apiKey, model, "")
+}
+
+// NewGroqClientWithURL builds a GroqClient with custom URL and model.
+func NewGroqClientWithURL(apiKey, model, baseURL string) *GroqClient {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {
-		panic("ai.NewGroqClient: apiKey is required")
+		panic("ai.NewGroqClientWithURL: apiKey is required")
 	}
 
 	if strings.TrimSpace(model) == "" {
 		model = defaultModel
+	}
+
+	if strings.TrimSpace(baseURL) == "" {
+		baseURL = groqBaseURL
 	}
 
 	c := &GroqClient{
@@ -50,7 +59,7 @@ func NewGroqClient(apiKey, model string) *GroqClient {
 		Model:         strings.TrimSpace(model),
 		MaxInputChars: defaultMaxInputChars,
 		Timeout:       defaultTimeout,
-		baseURL:       groqBaseURL,
+		baseURL:       strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 	}
 	// Timeout is enforced by request context in Analyze; the client is intentionally
 	// created without a global Timeout to keep context as the single timeout source.
