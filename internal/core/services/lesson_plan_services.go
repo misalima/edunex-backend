@@ -21,18 +21,28 @@ import (
 const DefaultLinkExpiration = 3600
 
 type LessonPlanService struct {
-	repo     secondary.LessonPlanLoader
-	storage  secondary.StorageClient
-	enqueuer secondary.AnalysisJobEnqueuer
+	repo           secondary.LessonPlanLoader
+	storage        secondary.StorageClient
+	enqueuer       secondary.AnalysisJobEnqueuer
+	jobLoader      secondary.AnalysisJobLoader
+	analysisLoader secondary.LessonPlanAnalysisLoader
 }
 
 var _ primary.LessonPlanManager = (*LessonPlanService)(nil)
 
-func NewLessonPlanService(repo secondary.LessonPlanLoader, storage secondary.StorageClient, enqueuer secondary.AnalysisJobEnqueuer) *LessonPlanService {
+func NewLessonPlanService(
+	repo secondary.LessonPlanLoader,
+	storage secondary.StorageClient,
+	enqueuer secondary.AnalysisJobEnqueuer,
+	jobLoader secondary.AnalysisJobLoader,
+	analysisLoader secondary.LessonPlanAnalysisLoader,
+) *LessonPlanService {
 	return &LessonPlanService{
-		repo:     repo,
-		storage:  storage,
-		enqueuer: enqueuer,
+		repo:           repo,
+		storage:        storage,
+		enqueuer:       enqueuer,
+		jobLoader:      jobLoader,
+		analysisLoader: analysisLoader,
 	}
 }
 
@@ -142,4 +152,44 @@ func (s *LessonPlanService) ListLessonPlansWithSignedURLs(ctx context.Context) (
 	}
 
 	return lps, urls, nil
+}
+
+func (s *LessonPlanService) GetAnalysisStatus(ctx context.Context, lessonPlanID uuid.UUID) (*domain.LessonPlanAnalysisStatus, error) {
+	if lessonPlanID == uuid.Nil {
+		return nil, domain_errors.NewBadRequestMsg("lesson_plan_id is required")
+	}
+
+	lp, err := s.repo.GetLessonPlanByID(ctx, lessonPlanID)
+	if err != nil {
+		return nil, err
+	}
+	if lp == nil {
+		return nil, domain_errors.NewNotFoundMsg("lesson plan not found")
+	}
+
+	job, err := s.jobLoader.GetJobByLessonPlanID(ctx, lessonPlanID)
+	if err != nil {
+		logger.Log.Error("failed to fetch job by lesson plan ID", zap.Error(err), zap.String("lesson_plan_id", lessonPlanID.String()))
+		return nil, err
+	}
+
+	if job == nil {
+		return nil, domain_errors.NewNotFoundMsg("analysis job not found")
+	}
+
+	resp := &domain.LessonPlanAnalysisStatus{
+		Status:       job.Status,
+		ErrorMessage: job.ErrorMessage,
+	}
+
+	if job.Status == "done" {
+		analysis, err := s.analysisLoader.GetAnalysisByLessonPlanID(ctx, lessonPlanID)
+		if err != nil {
+			logger.Log.Error("failed to fetch final analysis result", zap.Error(err), zap.String("lesson_plan_id", lessonPlanID.String()))
+			return nil, err
+		}
+		resp.Analysis = analysis
+	}
+
+	return resp, nil
 }

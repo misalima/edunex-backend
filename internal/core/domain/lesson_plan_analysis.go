@@ -21,3 +21,10 @@ type LessonPlanAnalysis struct {
 	Suggestions    string // JSON: array of actionable suggestions
 	CreatedAt      time.Time
 }
+
+// LessonPlanAnalysisStatus represents the pedagogical status and eventual result of a lesson plan analysis.
+type LessonPlanAnalysisStatus struct {
+	Status       string
+	ErrorMessage string
+	Analysis     *LessonPlanAnalysis
+}

@@ -138,3 +138,51 @@ func (h *LessonPlanHandler) GetByID(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, response.FromDomainLessonPlanWithURL(lp, signedURL))
 }
+
+// GetAnalysis godoc
+// @Summary Get pedagogical analysis for a lesson plan
+// @Description Returns the status and structured pedagogical analysis when ready.
+// @Tags Lesson Plans
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Lesson plan ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} response.ErrorMessageResponse
+// @Failure 401 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
+// @Failure 500 {object} response.ErrorResponse
+// @Router /lesson-plans/{id}/analysis [get]
+func (h *LessonPlanHandler) GetAnalysis(c echo.Context) error {
+	ctx := c.Request().Context()
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id format"})
+	}
+
+	analysisStatus, err := h.lessonPlanService.GetAnalysisStatus(ctx, id)
+	if err != nil {
+		return handleDomainError(c, err)
+	}
+
+	resp := map[string]interface{}{
+		"status":        analysisStatus.Status,
+		"error_message": analysisStatus.ErrorMessage,
+	}
+
+	if analysisStatus.Analysis != nil {
+		resp["analysis"] = map[string]interface{}{
+			"id":              analysisStatus.Analysis.ID.String(),
+			"lesson_plan_id":  analysisStatus.Analysis.LessonPlanID.String(),
+			"title":           analysisStatus.Analysis.Title,
+			"subject":         analysisStatus.Analysis.Subject,
+			"grade_level":     analysisStatus.Analysis.GradeLevel,
+			"alignment_score": analysisStatus.Analysis.AlignmentScore,
+			"feedback":        analysisStatus.Analysis.Feedback,
+			"metadata":        analysisStatus.Analysis.Metadata,
+			"suggestions":     analysisStatus.Analysis.Suggestions,
+			"created_at":      analysisStatus.Analysis.CreatedAt,
+		}
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}

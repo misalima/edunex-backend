@@ -126,7 +126,10 @@ func (c *Container) GetLessonPlanHandler() *handlers.LessonPlanHandler {
 	c.lessonPlanOnce.Do(func() {
 		lpRepo := postgres.NewLessonPlanRepository(c.db)
 		storage := c.GetStorageClient()
-		lpSvc := services.NewLessonPlanService(lpRepo, storage, c.GetJobManager())
+		jobManager := c.GetJobManager()
+		analysisRepo := postgres.NewLessonPlanAnalysisRepository(c.db)
+		analysisJobRepo := postgres.NewAnalysisJobRepository(c.db)
+		lpSvc := services.NewLessonPlanService(lpRepo, storage, jobManager, analysisJobRepo, analysisRepo)
 		c.lessonPlanHandler = handlers.NewLessonPlanHandler(lpSvc)
 	})
 	return c.lessonPlanHandler

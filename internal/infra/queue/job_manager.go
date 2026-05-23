@@ -478,3 +478,13 @@ func analysisResultToDomain(lessonPlanID uuid.UUID, result *secondary.AnalysisRe
 func (jm *JobManager) GetJobByID(ctx context.Context, jobID uuid.UUID) (*domain.AnalysisJob, error) {
 	return jm.analysisJobRepo.GetJobByID(ctx, jobID)
 }
+
+// GetJobByLessonPlanID fetches an analysis job by lesson plan ID
+func (jm *JobManager) GetJobByLessonPlanID(ctx context.Context, lessonPlanID uuid.UUID) (*domain.AnalysisJob, error) {
+	return jm.analysisJobRepo.GetJobByLessonPlanID(ctx, lessonPlanID)
+}
+
+// GetAnalysisByLessonPlanID fetches the analysis result by lesson plan ID
+func (jm *JobManager) GetAnalysisByLessonPlanID(ctx context.Context, lessonPlanID uuid.UUID) (*domain.LessonPlanAnalysis, error) {
+	return jm.analysisLoader.GetAnalysisByLessonPlanID(ctx, lessonPlanID)
+}
