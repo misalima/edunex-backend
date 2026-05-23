@@ -7,41 +7,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/domain"
-	"gorm.io/datatypes"
+	"github.com/misalima/edunex-backend/internal/infra/postgres/models"
 	"gorm.io/gorm"
 )
-
-type AnalysisJob struct {
-	ID           uuid.UUID `gorm:"type:uuid;primaryKey"`
-	LessonPlanID uuid.UUID `gorm:"type:uuid;uniqueIndex"`
-	Status       string    `gorm:"index"`
-	Attempts     int
-	ErrorMessage string
-	CreatedAt    time.Time
-	StartedAt    *time.Time
-	FinishedAt   *time.Time
-}
-
-// TableName specifies the table name for GORM
-func (AnalysisJob) TableName() string {
-	return "analysis_jobs"
-}
-
-func (m *AnalysisJob) toDomain() *domain.AnalysisJob {
-	if m == nil {
-		return nil
-	}
-	return &domain.AnalysisJob{
-		ID:           m.ID,
-		LessonPlanID: m.LessonPlanID,
-		Status:       m.Status,
-		Attempts:     m.Attempts,
-		ErrorMessage: m.ErrorMessage,
-		CreatedAt:    m.CreatedAt,
-		StartedAt:    m.StartedAt,
-		FinishedAt:   m.FinishedAt,
-	}
-}
 
 // AnalysisJobRepository handles database operations for analysis jobs
 type AnalysisJobRepository struct {
@@ -77,7 +45,7 @@ func (r *AnalysisJobRepository) UpsertAnalysisJob(ctx context.Context, lessonPla
 
 	// If no rows were affected, fetch the existing job ID
 	if result.RowsAffected == 0 {
-		var existingJob AnalysisJob
+		var existingJob models.AnalysisJobModel
 		if err := r.db.WithContext(ctx).
 			Where("lesson_plan_id = ?", lessonPlanID).
 			First(&existingJob).Error; err != nil {
@@ -92,7 +60,7 @@ func (r *AnalysisJobRepository) UpsertAnalysisJob(ctx context.Context, lessonPla
 // FetchPendingJob fetches a single pending job and atomically marks it as processing
 // Uses SELECT FOR UPDATE SKIP LOCKED to avoid race conditions
 func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*domain.AnalysisJob, error) {
-	var job AnalysisJob
+	var job models.AnalysisJobModel
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Raw query to use SELECT FOR UPDATE SKIP LOCKED
@@ -117,8 +85,8 @@ func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*domain.An
 					"status":     domain.JobProcessing,
 					"started_at": now,
 				}).Error; err != nil {
-				return fmt.Errorf("failed to mark job as processing: %w", err)
-			}
+					return fmt.Errorf("failed to mark job as processing: %w", err)
+				}
 		}
 
 		return nil
@@ -132,13 +100,13 @@ func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*domain.An
 		return nil, nil // No pending jobs found
 	}
 
-	return job.toDomain(), nil
+	return job.ToDomain(), nil
 }
 
 // FetchPendingJobByID fetches a specific pending job by ID and atomically marks it as processing.
 // Returns nil if the job is not in pending status (already claimed by another worker).
 func (r *AnalysisJobRepository) FetchPendingJobByID(ctx context.Context, jobID uuid.UUID) (*domain.AnalysisJob, error) {
-	var job AnalysisJob
+	var job models.AnalysisJobModel
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Fetch specific job with lock if pending
@@ -161,8 +129,8 @@ func (r *AnalysisJobRepository) FetchPendingJobByID(ctx context.Context, jobID u
 					"status":     domain.JobProcessing,
 					"started_at": now,
 				}).Error; err != nil {
-				return fmt.Errorf("failed to mark job as processing: %w", err)
-			}
+					return fmt.Errorf("failed to mark job as processing: %w", err)
+				}
 		}
 
 		return nil
@@ -176,13 +144,13 @@ func (r *AnalysisJobRepository) FetchPendingJobByID(ctx context.Context, jobID u
 		return nil, nil // Job not found or not pending
 	}
 
-	return job.toDomain(), nil
+	return job.ToDomain(), nil
 }
 
 // MarkJobDone marks a job as completed
 func (r *AnalysisJobRepository) MarkJobDone(ctx context.Context, jobID uuid.UUID) error {
 	now := time.Now()
-	result := r.db.WithContext(ctx).Model(&AnalysisJob{}).
+	result := r.db.WithContext(ctx).Model(&models.AnalysisJobModel{}).
 		Where("id = ?", jobID).
 		Updates(map[string]interface{}{
 			"status":        domain.JobDone,
@@ -199,7 +167,7 @@ func (r *AnalysisJobRepository) MarkJobDone(ctx context.Context, jobID uuid.UUID
 
 // MarkJobFailed marks a job as failed and increments attempt count
 func (r *AnalysisJobRepository) MarkJobFailed(ctx context.Context, jobID uuid.UUID, errorMsg string, maxAttempts int) error {
-	var job AnalysisJob
+	var job models.AnalysisJobModel
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Fetch current job
@@ -234,7 +202,7 @@ func (r *AnalysisJobRepository) MarkJobFailed(ctx context.Context, jobID uuid.UU
 
 // GetJobByLessonPlanID fetches a job by lesson plan ID
 func (r *AnalysisJobRepository) GetJobByLessonPlanID(ctx context.Context, lessonPlanID uuid.UUID) (*domain.AnalysisJob, error) {
-	var job AnalysisJob
+	var job models.AnalysisJobModel
 
 	if err := r.db.WithContext(ctx).
 		Where("lesson_plan_id = ?", lessonPlanID).
@@ -245,7 +213,7 @@ func (r *AnalysisJobRepository) GetJobByLessonPlanID(ctx context.Context, lesson
 		return nil, fmt.Errorf("failed to fetch job: %w", err)
 	}
 
-	return job.toDomain(), nil
+	return job.ToDomain(), nil
 }
 
 // CleanupStaleProcessingJobs marks processing jobs that haven't been updated as pending (recovery from crashes)
@@ -253,6 +221,7 @@ func (r *AnalysisJobRepository) CleanupStaleProcessingJobs(ctx context.Context, 
 	staleBefore := time.Now().Add(-staleThreshold)
 
 	result := r.db.WithContext(ctx).
+		Model(&models.AnalysisJobModel{}).
 		Where("status = ? AND started_at < ?", domain.JobProcessing, staleBefore).
 		Updates(map[string]interface{}{
 			"status":     domain.JobPending,
@@ -275,7 +244,7 @@ func (r *AnalysisJobRepository) GetJobStatistics(ctx context.Context) (map[strin
 
 	var counts []StatusCount
 	if err := r.db.WithContext(ctx).
-		Model(&AnalysisJob{}).
+		Model(&models.AnalysisJobModel{}).
 		Select("status, COUNT(*) as count").
 		Group("status").
 		Scan(&counts).Error; err != nil {
@@ -302,21 +271,13 @@ func (r *AnalysisJobRepository) SaveAnalysisAndMarkDone(ctx context.Context, ana
 	// Insert analysis model (which implements InsertAnalysis) and mark job done in one transaction
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Insert the analysis
-		model := &lessonPlanAnalysisModel{
-			ID:             analysis.ID,
-			LessonPlanID:   analysis.LessonPlanID,
-			Title:          analysis.Title,
-			Subject:        analysis.Subject,
-			GradeLevel:     analysis.GradeLevel,
-			AlignmentScore: analysis.AlignmentScore,
-			Feedback:       analysis.Feedback,
-			Metadata:       datatypes.JSON(analysis.Metadata),
-			Suggestions:    datatypes.JSON(analysis.Suggestions),
-			CreatedAt:      analysis.CreatedAt,
+		model := models.FromDomainAnalysis(analysis)
+		if model.ID == uuid.Nil {
+			model.ID = uuid.New()
 		}
 
 		// Delete any existing analysis for this lesson plan to prevent unique constraint violation on re-analysis
-		if err := tx.Where("lesson_plan_id = ?", analysis.LessonPlanID).Delete(&lessonPlanAnalysisModel{}).Error; err != nil {
+		if err := tx.Where("lesson_plan_id = ?", analysis.LessonPlanID).Delete(&models.LessonPlanAnalysisModel{}).Error; err != nil {
 			return fmt.Errorf("failed to delete existing analysis: %w", err)
 		}
 
@@ -326,7 +287,7 @@ func (r *AnalysisJobRepository) SaveAnalysisAndMarkDone(ctx context.Context, ana
 
 		// Mark job as done
 		now := time.Now()
-		if err := tx.Model(&AnalysisJob{}).
+		if err := tx.Model(&models.AnalysisJobModel{}).
 			Where("id = ?", jobID).
 			Updates(map[string]interface{}{
 				"status":        domain.JobDone,
@@ -344,7 +305,7 @@ func (r *AnalysisJobRepository) SaveAnalysisAndMarkDone(ctx context.Context, ana
 
 // GetJobByID fetches an analysis job by ID
 func (r *AnalysisJobRepository) GetJobByID(ctx context.Context, jobID uuid.UUID) (*domain.AnalysisJob, error) {
-	var job AnalysisJob
+	var job models.AnalysisJobModel
 
 	if err := r.db.WithContext(ctx).
 		Where("id = ?", jobID).
@@ -355,5 +316,6 @@ func (r *AnalysisJobRepository) GetJobByID(ctx context.Context, jobID uuid.UUID)
 		return nil, fmt.Errorf("failed to fetch job by ID: %w", err)
 	}
 
-	return job.toDomain(), nil
+	return job.ToDomain(), nil
 }
+
