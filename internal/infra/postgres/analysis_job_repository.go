@@ -27,6 +27,22 @@ func (AnalysisJob) TableName() string {
 	return "analysis_jobs"
 }
 
+func (m *AnalysisJob) toDomain() *domain.AnalysisJob {
+	if m == nil {
+		return nil
+	}
+	return &domain.AnalysisJob{
+		ID:           m.ID,
+		LessonPlanID: m.LessonPlanID,
+		Status:       m.Status,
+		Attempts:     m.Attempts,
+		ErrorMessage: m.ErrorMessage,
+		CreatedAt:    m.CreatedAt,
+		StartedAt:    m.StartedAt,
+		FinishedAt:   m.FinishedAt,
+	}
+}
+
 // AnalysisJobRepository handles database operations for analysis jobs
 type AnalysisJobRepository struct {
 	db *gorm.DB
@@ -47,7 +63,9 @@ func (r *AnalysisJobRepository) UpsertAnalysisJob(ctx context.Context, lessonPla
 		VALUES (?, ?, ?, 0, now())
 		ON CONFLICT (lesson_plan_id) DO UPDATE SET
 			status = 'pending',
+			attempts = 0,
 			error_message = NULL,
+			created_at = now(),
 			started_at = NULL,
 			finished_at = NULL
 		WHERE analysis_jobs.status IN ('done', 'failed')
@@ -73,7 +91,7 @@ func (r *AnalysisJobRepository) UpsertAnalysisJob(ctx context.Context, lessonPla
 
 // FetchPendingJob fetches a single pending job and atomically marks it as processing
 // Uses SELECT FOR UPDATE SKIP LOCKED to avoid race conditions
-func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*AnalysisJob, error) {
+func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*domain.AnalysisJob, error) {
 	var job AnalysisJob
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -114,12 +132,12 @@ func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*AnalysisJ
 		return nil, nil // No pending jobs found
 	}
 
-	return &job, nil
+	return job.toDomain(), nil
 }
 
 // FetchPendingJobByID fetches a specific pending job by ID and atomically marks it as processing.
 // Returns nil if the job is not in pending status (already claimed by another worker).
-func (r *AnalysisJobRepository) FetchPendingJobByID(ctx context.Context, jobID uuid.UUID) (*AnalysisJob, error) {
+func (r *AnalysisJobRepository) FetchPendingJobByID(ctx context.Context, jobID uuid.UUID) (*domain.AnalysisJob, error) {
 	var job AnalysisJob
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -158,7 +176,7 @@ func (r *AnalysisJobRepository) FetchPendingJobByID(ctx context.Context, jobID u
 		return nil, nil // Job not found or not pending
 	}
 
-	return &job, nil
+	return job.toDomain(), nil
 }
 
 // MarkJobDone marks a job as completed
@@ -215,7 +233,7 @@ func (r *AnalysisJobRepository) MarkJobFailed(ctx context.Context, jobID uuid.UU
 }
 
 // GetJobByLessonPlanID fetches a job by lesson plan ID
-func (r *AnalysisJobRepository) GetJobByLessonPlanID(ctx context.Context, lessonPlanID uuid.UUID) (*AnalysisJob, error) {
+func (r *AnalysisJobRepository) GetJobByLessonPlanID(ctx context.Context, lessonPlanID uuid.UUID) (*domain.AnalysisJob, error) {
 	var job AnalysisJob
 
 	if err := r.db.WithContext(ctx).
@@ -227,7 +245,7 @@ func (r *AnalysisJobRepository) GetJobByLessonPlanID(ctx context.Context, lesson
 		return nil, fmt.Errorf("failed to fetch job: %w", err)
 	}
 
-	return &job, nil
+	return job.toDomain(), nil
 }
 
 // CleanupStaleProcessingJobs marks processing jobs that haven't been updated as pending (recovery from crashes)
@@ -284,7 +302,7 @@ func (r *AnalysisJobRepository) SaveAnalysisAndMarkDone(ctx context.Context, ana
 	// Insert analysis model (which implements InsertAnalysis) and mark job done in one transaction
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Insert the analysis
-		lessonPlanAnalysisModel := &lessonPlanAnalysisModel{
+		model := &lessonPlanAnalysisModel{
 			ID:             analysis.ID,
 			LessonPlanID:   analysis.LessonPlanID,
 			Title:          analysis.Title,
@@ -297,7 +315,12 @@ func (r *AnalysisJobRepository) SaveAnalysisAndMarkDone(ctx context.Context, ana
 			CreatedAt:      analysis.CreatedAt,
 		}
 
-		if err := tx.Create(lessonPlanAnalysisModel).Error; err != nil {
+		// Delete any existing analysis for this lesson plan to prevent unique constraint violation on re-analysis
+		if err := tx.Where("lesson_plan_id = ?", analysis.LessonPlanID).Delete(&lessonPlanAnalysisModel{}).Error; err != nil {
+			return fmt.Errorf("failed to delete existing analysis: %w", err)
+		}
+
+		if err := tx.Create(model).Error; err != nil {
 			return fmt.Errorf("failed to insert analysis: %w", err)
 		}
 
@@ -317,4 +340,20 @@ func (r *AnalysisJobRepository) SaveAnalysisAndMarkDone(ctx context.Context, ana
 	})
 
 	return err
+}
+
+// GetJobByID fetches an analysis job by ID
+func (r *AnalysisJobRepository) GetJobByID(ctx context.Context, jobID uuid.UUID) (*domain.AnalysisJob, error) {
+	var job AnalysisJob
+
+	if err := r.db.WithContext(ctx).
+		Where("id = ?", jobID).
+		First(&job).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to fetch job by ID: %w", err)
+	}
+
+	return job.toDomain(), nil
 }

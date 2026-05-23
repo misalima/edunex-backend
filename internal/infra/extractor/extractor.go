@@ -139,7 +139,7 @@ func (e *Extractor) ExtractFromStorage(ctx context.Context, objectPath string) (
 	// Download file
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, signedURL, nil)
 	if err != nil {
-		logger.Log.Error("failed to create download request", zap.Error(err), zap.String("signed_url", signedURL))
+		logger.Log.Error("failed to create download request", zap.Error(err), zap.String("object_path", objectPath))
 		return "", fmt.Errorf("failed to create download request: %w", err)
 	}
 
@@ -160,11 +160,21 @@ func (e *Extractor) ExtractFromStorage(ctx context.Context, objectPath string) (
 		return "", fmt.Errorf("download failed with status %d", resp.StatusCode)
 	}
 
-	// Read all data into buffer
-	data, err := io.ReadAll(resp.Body)
+	// Read limited data into buffer to protect against OOM/DoS
+	maxBytes := e.MaxBytes
+	if maxBytes <= 0 {
+		maxBytes = DefaultMaxBytes
+	}
+
+	lr := &io.LimitedReader{R: resp.Body, N: maxBytes + 1}
+	data, err := io.ReadAll(lr)
 	if err != nil {
 		logger.Log.Error("failed to read response body", zap.Error(err), zap.String("object_path", objectPath))
 		return "", fmt.Errorf("failed to read downloaded file: %w", err)
+	}
+	if int64(len(data)) > maxBytes {
+		logger.Log.Error("downloaded file exceeds maximum allowed size", zap.Int64("max_bytes", maxBytes), zap.String("object_path", objectPath))
+		return "", ErrTooLarge
 	}
 
 	logger.Log.Debug("file downloaded successfully", zap.String("object_path", objectPath), zap.Int("size", len(data)))

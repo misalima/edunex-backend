@@ -12,7 +12,6 @@ import (
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
-	"github.com/misalima/edunex-backend/internal/infra/postgres"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -23,7 +22,6 @@ type JobManagerConfig struct {
 	MaxAttempts    int
 	PollInterval   time.Duration
 	StaleThreshold time.Duration
-	MaxBackoffTime time.Duration
 }
 
 // DefaultJobManagerConfig returns a sensible default configuration
@@ -33,7 +31,6 @@ func DefaultJobManagerConfig() *JobManagerConfig {
 		MaxAttempts:    3,
 		PollInterval:   10 * time.Second,
 		StaleThreshold: 30 * time.Minute,
-		MaxBackoffTime: 5 * time.Minute,
 	}
 }
 
@@ -46,7 +43,7 @@ type JobManager struct {
 	extractors      secondary.DataExtractor
 	lessonPlanRepo  secondary.LessonPlanLoader
 	analysisLoader  secondary.LessonPlanAnalysisLoader
-	analysisJobRepo *postgres.AnalysisJobRepository
+	analysisJobRepo secondary.AnalysisJobLoader
 	jobChan         chan uuid.UUID
 	workerWg        sync.WaitGroup
 	notifyListener  *NotificationListener
@@ -79,6 +76,7 @@ func NewJobManager(
 	extractors secondary.DataExtractor,
 	lessonPlanRepo secondary.LessonPlanLoader,
 	analysisLoader secondary.LessonPlanAnalysisLoader,
+	analysisJobRepo secondary.AnalysisJobLoader,
 ) *JobManager {
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -90,7 +88,7 @@ func NewJobManager(
 		extractors:      extractors,
 		lessonPlanRepo:  lessonPlanRepo,
 		analysisLoader:  analysisLoader,
-		analysisJobRepo: postgres.NewAnalysisJobRepository(db),
+		analysisJobRepo: analysisJobRepo,
 		jobChan:         make(chan uuid.UUID, config.WorkerCount*2),
 		ctx:             ctx,
 		cancel:          cancel,
@@ -299,7 +297,7 @@ func (jm *JobManager) processJob(jobID uuid.UUID, workerID int) {
 }
 
 // processJobWithData does the actual work of processing a job that's already been fetched and claimed.
-func (jm *JobManager) processJobWithData(job *postgres.AnalysisJob, workerID int) {
+func (jm *JobManager) processJobWithData(job *domain.AnalysisJob, workerID int) {
 	// Get lesson plan
 	lessonPlan, err := jm.lessonPlanRepo.GetLessonPlanByID(jm.ctx, job.LessonPlanID)
 	if err != nil {
@@ -474,4 +472,9 @@ func analysisResultToDomain(lessonPlanID uuid.UUID, result *secondary.AnalysisRe
 		Suggestions:    string(suggestionsJSON),
 		CreatedAt:      time.Now(),
 	}, nil
+}
+
+// GetJobByID fetches an analysis job by ID
+func (jm *JobManager) GetJobByID(ctx context.Context, jobID uuid.UUID) (*domain.AnalysisJob, error) {
+	return jm.analysisJobRepo.GetJobByID(ctx, jobID)
 }

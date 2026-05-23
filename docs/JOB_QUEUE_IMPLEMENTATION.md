@@ -18,7 +18,7 @@ Manages database operations for `analysis_jobs` table:
 - `UpsertAnalysisJob()` - Insert or reactivate a job (ON CONFLICT handling)
 - `FetchPendingJob()` - Atomically fetch and mark job as processing (SELECT FOR UPDATE SKIP LOCKED)
 - `MarkJobDone()` - Transition to done state
-- `MarkJobFailed()` - Handle failures with exponential backoff and retry logic
+- `MarkJobFailed()` - Handle failures with retry tracking and logic
 - `CleanupStaleProcessingJobs()` - Recovery from crashed workers
 - `GetJobStatistics()` - Metrics retrieval
 
@@ -34,7 +34,7 @@ Orchestrates the entire job processing system:
 - Initializes worker pool (default: 3 workers)
 - Starts notification listener (with polling fallback)
 - Manages job lifecycle: enqueue → processing → done/failed
-- Implements retry logic with exponential backoff
+- Implements retry logic with immediate retries and tracking
 - Tracks metrics (processed jobs, success rate, etc.)
 - Graceful startup/shutdown
 
@@ -43,7 +43,6 @@ Orchestrates the entire job processing system:
 - `MaxAttempts`: 3 (retry limit)
 - `PollInterval`: 10 seconds (fallback polling for missed notifications)
 - `StaleThreshold`: 30 minutes (mark stale processing jobs as pending)
-- `MaxBackoffTime`: 5 minutes (max exponential backoff)
 
 #### 4. **AnalysisJobHandler** (`internal/api/handlers/analysis_job_handler.go`)
 HTTP endpoints for job management:
@@ -51,10 +50,10 @@ HTTP endpoints for job management:
 - `GET /api/v1/analysis-jobs/{job_id}` - Get job status
 - `GET /api/v1/analysis-jobs/metrics` - Job statistics
 
-#### 5. **ExtractorWithStorage** (`internal/infra/extractor/extractor_adapter.go`)
-Adapter combining Storage + Extractor:
-- Downloads files from Supabase storage
-- Extracts text content (PDF, DOCX, plain text)
+#### 5. **Extractor** (`internal/infra/extractor/extractor.go`)
+Extractor with optional storage capability:
+- Downloads files from Supabase storage using pre-configured `StorageClient`
+- Extracts text content (PDF, DOCX, plain text) using unified parsing limits
 - Implements `DataExtractor` interface
 
 ## Database Schema
@@ -186,7 +185,7 @@ CREATE INDEX idx_analysis_jobs_created_at ON analysis_jobs(created_at);
 | DONE    | (terminal)              | -         | Job complete |
 | FAILED  | (terminal)              | -         | All retries exhausted |
 
-*Job transitions back to PENDING for retry with exponential backoff
+*Job transitions back to PENDING for retry
 
 ## Atomic Operations
 
@@ -401,7 +400,7 @@ On termination signal (SIGTERM/SIGINT):
 
 ### Scenario 4: AI Analysis Fails (rate limit/API down)
 - Error message saved in `error_message` field
-- Retry with exponential backoff (2^attempts seconds)
+- Immediate retry with tracking
 - Max 3 attempts by default
 - After max attempts: marked as failed
 

@@ -161,6 +161,7 @@ func (c *Container) GetJobManager() *queue.JobManager {
 		dataExtractor := c.GetExtractor()
 		lessonPlanRepo := postgres.NewLessonPlanRepository(c.db)
 		analysisRepo := postgres.NewLessonPlanAnalysisRepository(c.db)
+		analysisJobRepo := postgres.NewAnalysisJobRepository(c.db)
 
 		c.jobManager = queue.NewJobManager(
 			c.db,
@@ -170,6 +171,7 @@ func (c *Container) GetJobManager() *queue.JobManager {
 			dataExtractor,
 			lessonPlanRepo,
 			analysisRepo,
+			analysisJobRepo,
 		)
 	})
 	return c.jobManager

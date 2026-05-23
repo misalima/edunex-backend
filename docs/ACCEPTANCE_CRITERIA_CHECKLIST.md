@@ -117,8 +117,7 @@
 
 - ✅ **Attempts & Retry Policy**
   - Max attempts: 3 (configurable)
-  - Exponential backoff: 2^attempts seconds (2, 4, 8...)
-  - Max backoff: 5 minutes
+  - Immediate retry with tracking
   - Error message saved for each attempt
 
 - ✅ **Graceful Shutdown**
@@ -153,23 +152,25 @@
 
 ## ✅ Files Changed/Created
 
-### New Files (9 files)
-1. ✅ `internal/infra/postgres/analysis_job_repository.go` - DB operations
-2. ✅ `internal/infra/queue/notification_listener.go` - Postgres NOTIFY/LISTEN
-3. ✅ `internal/infra/queue/job_manager.go` - Worker orchestration
-4. ✅ `internal/api/handlers/analysis_job_handler.go` - HTTP endpoints
-5. ✅ `internal/infra/extractor/extractor_adapter.go` - Storage integration
-6. ✅ `docs/JOB_QUEUE_IMPLEMENTATION.md` - Architecture guide
-7. ✅ `docs/JOB_QUEUE_IMPLEMENTATION_SUMMARY.md` - Changes summary
-8. ✅ `internal/infra/queue/testing.go` - Test examples
+### New Files (10 files)
+1. ✅ `internal/core/domain/analysis_job.go` - Domain model for analysis jobs
+2. ✅ `internal/core/interfaces/secondary/analysis_job_loader.go` - Port for analysis job loading
+3. ✅ `internal/infra/postgres/analysis_job_repository.go` - DB operations
+4. ✅ `internal/infra/queue/notification_listener.go` - Postgres NOTIFY/LISTEN
+5. ✅ `internal/infra/queue/job_manager.go` - Worker orchestration
+6. ✅ `internal/api/handlers/analysis_job_handler.go` - HTTP endpoints
+7. ✅ `docs/JOB_QUEUE_IMPLEMENTATION.md` - Architecture guide
+8. ✅ `docs/JOB_QUEUE_IMPLEMENTATION_SUMMARY.md` - Changes summary
+9. ✅ `internal/infra/queue/testing.go` - Test examples
 
-### Modified Files (6 files)
+### Modified Files (7 files)
 1. ✅ `internal/api/container/container.go` - Add lazy dependencies
 2. ✅ `internal/api/router/router.go` - Register new routes
 3. ✅ `cmd/app/main.go` - Bootstrap + shutdown job manager
-4. ✅ `internal/infra/postgres/lesson_plan_analysis_repository.go` - Add SaveAnalysis()
-5. ✅ `internal/core/interfaces/secondary/lesson_plan_analysis_loader.go` - Add SaveAnalysis() method
-6. ✅ `internal/core/interfaces/secondary/data_extractor.go` - Add ExtractFromStorage() method
+4. ✅ `internal/infra/extractor/extractor.go` - Add ExtractFromStorage() and NewExtractorWithStorage()
+5. ✅ `internal/infra/postgres/lesson_plan_analysis_repository.go` - Add SaveAnalysis()
+6. ✅ `internal/core/interfaces/secondary/lesson_plan_analysis_loader.go` - Add SaveAnalysis() method
+7. ✅ `internal/core/interfaces/secondary/data_extractor.go` - Add ExtractFromStorage() method
 
 ### Database Changes
 - ✅ Table `analysis_jobs` already exists (in init.sql)
@@ -188,7 +189,6 @@ WorkerCount:    3                  // Configurable
 MaxAttempts:    3                  // Max retries
 PollInterval:   10 * time.Second   // Fallback polling
 StaleThreshold: 30 * time.Minute   // Crash recovery threshold
-MaxBackoffTime: 5 * time.Minute    // Max exponential backoff
 ```
 
 ## ✅ HTTP API
@@ -272,7 +272,7 @@ $ go build -o app.exe ./cmd/app
 - Polling fallback for notification failures
 
 ✅ **Production Ready Features:**
-- Exponential backoff retry logic
+- Retry logic with immediate retries and tracking
 - Atomic SELECT FOR UPDATE operations
 - Postgres NOTIFY/LISTEN with graceful degradation
 - Structured logging throughout

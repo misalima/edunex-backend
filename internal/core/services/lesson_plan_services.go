@@ -83,7 +83,7 @@ func (s *LessonPlanService) CreateLessonPlan(ctx context.Context, lp *domain.Les
 	}
 
 	if s.enqueuer != nil {
-		enqueueCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		enqueueCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
 		if jobID, err := s.enqueuer.Enqueue(enqueueCtx, createdLP.ID); err != nil {

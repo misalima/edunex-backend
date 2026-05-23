@@ -73,7 +73,8 @@ func (h *AnalysisJobHandler) Analyze(c echo.Context) error {
 // @Failure 500 {object} response.ErrorResponse
 // @Router /analysis-jobs/{job_id} [get]
 func (h *AnalysisJobHandler) GetJobStatus(c echo.Context) error {
-	// Placeholder - implement based on job repository retrieval
+	ctx := c.Request().Context()
+
 	jobIDStr := c.Param("job_id")
 	jobID, err := uuid.Parse(jobIDStr)
 	if err != nil {
@@ -82,10 +83,28 @@ func (h *AnalysisJobHandler) GetJobStatus(c echo.Context) error {
 
 	logger.Log.Debug("fetching job status", zap.String("job_id", jobID.String()))
 
-	return c.JSON(http.StatusOK, map[string]string{
-		"job_id": jobID.String(),
-		"status": "processing",
-	})
+	job, err := h.jobManager.GetJobByID(ctx, jobID)
+	if err != nil {
+		logger.Log.Error("failed to fetch job status", zap.Error(err), zap.String("job_id", jobID.String()))
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to fetch job status"})
+	}
+
+	if job == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "job not found"})
+	}
+
+	resp := map[string]interface{}{
+		"job_id":         job.ID.String(),
+		"lesson_plan_id": job.LessonPlanID.String(),
+		"status":         job.Status,
+		"attempts":      job.Attempts,
+		"error_message":  job.ErrorMessage,
+		"created_at":     job.CreatedAt,
+		"started_at":     job.StartedAt,
+		"finished_at":    job.FinishedAt,
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }
 
 // GetMetrics godoc

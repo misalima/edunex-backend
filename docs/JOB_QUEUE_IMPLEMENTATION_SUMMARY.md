@@ -30,10 +30,9 @@
     - GET `/analysis-jobs/metrics` - Metrics
 
 ### 3. Storage Integration
-- **`internal/infra/extractor/extractor_adapter.go`** (65 linhas)
-  - Combines Extractor + StorageClient
-  - Downloads from Supabase storage
-  - Extracts text from PDF/DOCX/text files
+- **`internal/infra/extractor/extractor.go`**
+  - Implements `Extractor` struct with optional `StorageClient`
+  - Downloads from Supabase storage and extracts text from PDF/DOCX/text files
 
 ### 4. Documentation
 - **`docs/JOB_QUEUE_IMPLEMENTATION.md`** (500+ linhas)
@@ -57,7 +56,7 @@
 - **`internal/api/container/container.go`**
   - Added lazy-loaded dependencies:
     - `GetAIProvider()` - Groq AI client
-    - `GetExtractor()` - ExtractorWithStorage
+    - `GetExtractor()` - Extractor with storage support
     - `GetJobManager()` - Job queue manager
     - `GetAnalysisJobHandler()` - HTTP handler for jobs
 
@@ -125,7 +124,7 @@ All other configuration already present:
 ✅ **Atomic Operations**: SELECT FOR UPDATE SKIP LOCKED for race-free job fetching
 ✅ **Real-time Notifications**: Postgres NOTIFY/LISTEN with Go channels
 ✅ **Polling Fallback**: 10-second polling interval if notifications fail
-✅ **Retry Logic**: Exponential backoff (2^attempts seconds), max 3 attempts
+✅ **Retry Logic**: Immediate retry with tracking, max 3 attempts
 ✅ **Error Tracking**: Store error messages for debugging
 ✅ **Crash Recovery**: Clean up stale processing jobs on startup
 ✅ **Graceful Shutdown**: Proper context cancellation and resource cleanup
