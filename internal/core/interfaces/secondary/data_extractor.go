@@ -21,4 +21,6 @@ type DataExtractor interface {
 	// "application/pdf" or "text/plain"). It returns an ExtractionResult or
 	// an error if extraction fails.
 	ExtractText(ctx context.Context, r io.Reader, contentType string) (*ExtractionResult, error)
+	// ExtractFromStorage downloads and extracts text content from a storage object path
+	ExtractFromStorage(ctx context.Context, objectPath string) (string, error)
 }

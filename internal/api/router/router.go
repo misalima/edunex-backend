@@ -34,4 +34,10 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 	lPGroup.POST("", c.GetLessonPlanHandler().Create)
 	lPGroup.GET("", c.GetLessonPlanHandler().List)
 	lPGroup.GET("/:id", c.GetLessonPlanHandler().GetByID)
+	lPGroup.POST("/:lesson_plan_id/analyze", c.GetAnalysisJobHandler().Analyze)
+
+	// Analysis Jobs
+	analysisGroup := v1.Group("/analysis-jobs")
+	analysisGroup.GET("/:job_id", c.GetAnalysisJobHandler().GetJobStatus)
+	analysisGroup.GET("/metrics", c.GetAnalysisJobHandler().GetMetrics)
 }
