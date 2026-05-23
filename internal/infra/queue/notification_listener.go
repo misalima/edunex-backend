@@ -88,8 +88,14 @@ func (nl *NotificationListener) listen(pgListener *pq.Listener) {
 		nl.mu.Lock()
 		nl.isActive = false
 		nl.mu.Unlock()
-		pgListener.Unlisten(AnalysisJobNotifyChannel)
-		pgListener.Close()
+		err := pgListener.Unlisten(AnalysisJobNotifyChannel)
+		if err != nil {
+			logger.Log.Error("failed to unlisten on channel", zap.Error(err))
+		}
+		err = pgListener.Close()
+		if err != nil {
+			logger.Log.Error("failed to close listener", zap.Error(err))
+		}
 		logger.Log.Info("Notification listener stopped")
 	}()
 

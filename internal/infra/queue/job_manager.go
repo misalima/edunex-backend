@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -434,15 +433,6 @@ func (jm *JobManager) IsRunning() bool {
 	jm.mu.RLock()
 	defer jm.mu.RUnlock()
 	return jm.isRunning
-}
-
-// calculateBackoff calculates exponential backoff duration
-func calculateBackoff(attempts int, maxBackoff time.Duration) time.Duration {
-	backoff := time.Duration(math.Pow(2, float64(attempts))) * time.Second
-	if backoff > maxBackoff {
-		backoff = maxBackoff
-	}
-	return backoff
 }
 
 func analysisResultToDomain(lessonPlanID uuid.UUID, result *secondary.AnalysisResult) (*domain.LessonPlanAnalysis, error) {
