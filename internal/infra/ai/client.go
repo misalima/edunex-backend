@@ -87,8 +87,10 @@ func (c *GroqClient) Analyze(ctx context.Context, text string) (*secondary.Analy
 	payload := map[string]any{
 		"model": c.Model,
 		"input": prompt,
-		"response_format": map[string]string{
-			"type": "json_object",
+		"text": map[string]any{
+			"format": map[string]string{
+				"type": "json_object",
+			},
 		},
 	}
 

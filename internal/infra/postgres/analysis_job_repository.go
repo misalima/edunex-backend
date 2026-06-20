@@ -85,8 +85,8 @@ func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*domain.An
 					"status":     domain.JobProcessing,
 					"started_at": now,
 				}).Error; err != nil {
-					return fmt.Errorf("failed to mark job as processing: %w", err)
-				}
+				return fmt.Errorf("failed to mark job as processing: %w", err)
+			}
 		}
 
 		return nil
@@ -129,8 +129,8 @@ func (r *AnalysisJobRepository) FetchPendingJobByID(ctx context.Context, jobID u
 					"status":     domain.JobProcessing,
 					"started_at": now,
 				}).Error; err != nil {
-					return fmt.Errorf("failed to mark job as processing: %w", err)
-				}
+				return fmt.Errorf("failed to mark job as processing: %w", err)
+			}
 		}
 
 		return nil
@@ -318,4 +318,3 @@ func (r *AnalysisJobRepository) GetJobByID(ctx context.Context, jobID uuid.UUID)
 
 	return job.ToDomain(), nil
 }
-

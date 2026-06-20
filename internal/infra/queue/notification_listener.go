@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -36,13 +37,28 @@ func NewNotificationListener(connString string, jobChan chan uuid.UUID) (*Notifi
 	ctx, cancel := context.WithCancel(context.Background())
 
 	listener := &NotificationListener{
-		dbConnString: connString,
+		dbConnString: normalizeConnString(connString),
 		jobChan:      jobChan,
 		ctx:          ctx,
 		cancel:       cancel,
 	}
 
 	return listener, nil
+}
+
+func normalizeConnString(connString string) string {
+	parsed, err := url.Parse(connString)
+	if err != nil {
+		return connString
+	}
+
+	query := parsed.Query()
+	if query.Get("sslmode") == "" {
+		query.Set("sslmode", "disable")
+		parsed.RawQuery = query.Encode()
+	}
+
+	return parsed.String()
 }
 
 // Start begins listening for notifications

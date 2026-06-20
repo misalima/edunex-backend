@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
@@ -32,6 +33,16 @@ func (r *LessonPlanRepository) InsertLessonPlan(ctx context.Context, lp *domain.
 	}
 	logger.Log.Info("inserting lesson plan", zap.String("user_id", m.UserID.String()), zap.String("title", m.Title), zap.String("temp_id", m.ID.String()))
 	if err := r.db.WithContext(ctx).Create(m).Error; err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "lesson_plans_user_id_fkey" {
+			logger.Log.Info("user not found when inserting lesson plan", zap.String("user_id", m.UserID.String()), zap.String("title", m.Title))
+			return uuid.Nil, domain_errors.Wrap(
+				domain_errors.ErrUserNotFound.Code,
+				domain_errors.ErrUserNotFound.Message,
+				domain_errors.ErrUserNotFound.HTTPStatus,
+				err,
+			)
+		}
 		logger.Log.Error("failed to insert lesson plan", zap.Error(err), zap.String("user_id", m.UserID.String()), zap.String("title", m.Title))
 		return uuid.Nil, domain_errors.WrapUnexpectedMsg(err, "failed to insert lesson plan")
 	}
@@ -99,4 +110,3 @@ func (r *LessonPlanRepository) UpdateLessonPlan(ctx context.Context, lp *domain.
 	logger.Log.Info("lesson plan updated", zap.String("lesson_plan_id", m.ID.String()), zap.Int64("rows_affected", res.RowsAffected))
 	return nil
 }
-

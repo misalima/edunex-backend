@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
 	"github.com/misalima/edunex-backend/internal/infra/queue"
 	"go.uber.org/zap"
@@ -42,6 +44,10 @@ func (h *AnalysisJobHandler) Analyze(c echo.Context) error {
 
 	jobID, err := h.jobManager.Enqueue(ctx, lessonPlanID)
 	if err != nil {
+		if errors.Is(err, domain_errors.ErrLessonPlanNotFound) || errors.Is(err, domain_errors.ErrNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "lesson plan not found"})
+		}
+
 		logger.Log.Error("failed to enqueue analysis job",
 			zap.Error(err),
 			zap.String("lesson_plan_id", lessonPlanID.String()))
@@ -97,7 +103,7 @@ func (h *AnalysisJobHandler) GetJobStatus(c echo.Context) error {
 		"job_id":         job.ID.String(),
 		"lesson_plan_id": job.LessonPlanID.String(),
 		"status":         job.Status,
-		"attempts":      job.Attempts,
+		"attempts":       job.Attempts,
 		"error_message":  job.ErrorMessage,
 		"created_at":     job.CreatedAt,
 		"started_at":     job.StartedAt,

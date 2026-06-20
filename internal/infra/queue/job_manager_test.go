@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/url"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -301,6 +302,34 @@ func TestJobManager_PipelineExtractorFailure(t *testing.T) {
 	}
 	if jm.metrics.ProcessedJobs.Load() != 1 {
 		t.Errorf("expected processed jobs metric to be 1, got %d", jm.metrics.ProcessedJobs.Load())
+	}
+}
+
+func TestNormalizeConnString_AddsDisableSslMode(t *testing.T) {
+	conn := "postgresql://postgres:secret@localhost:5432/edunex"
+
+	got := normalizeConnString(conn)
+	parsed, err := url.Parse(got)
+	if err != nil {
+		t.Fatalf("failed to parse normalized connection string: %v", err)
+	}
+
+	if parsed.Query().Get("sslmode") != "disable" {
+		t.Fatalf("expected sslmode=disable, got %q", parsed.Query().Get("sslmode"))
+	}
+}
+
+func TestNormalizeConnString_PreservesExistingSslMode(t *testing.T) {
+	conn := "postgresql://postgres:secret@localhost:5432/edunex?sslmode=require"
+
+	got := normalizeConnString(conn)
+	parsed, err := url.Parse(got)
+	if err != nil {
+		t.Fatalf("failed to parse normalized connection string: %v", err)
+	}
+
+	if parsed.Query().Get("sslmode") != "require" {
+		t.Fatalf("expected sslmode=require, got %q", parsed.Query().Get("sslmode"))
 	}
 }
 

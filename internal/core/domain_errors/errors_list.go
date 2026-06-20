@@ -4,6 +4,7 @@ import "net/http"
 
 var (
 	ErrUserNotFound        = New("USER_NOT_FOUND", "user not found", http.StatusNotFound)
+	ErrLessonPlanNotFound  = New("LESSON_PLAN_NOT_FOUND", "lesson plan not found", http.StatusNotFound)
 	ErrInvalidCredentials  = New("INVALID_CREDENTIALS", "invalid credentials", http.StatusUnauthorized)
 	ErrUnauthorized        = New("UNAUTHORIZED", "unauthorized access", http.StatusForbidden)
 	ErrInvalidToken        = New("INVALID_TOKEN", "invalid token", http.StatusUnauthorized)

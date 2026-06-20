@@ -27,12 +27,16 @@ func TestGroqClientAnalyzeReturnsStructuredResultFromOutputText(t *testing.T) {
 		if _, ok := reqBody["input"].(string); !ok {
 			t.Fatalf("expected input in request body")
 		}
-		rf, ok := reqBody["response_format"].(map[string]any)
+		text, ok := reqBody["text"].(map[string]any)
 		if !ok {
-			t.Fatalf("expected response_format in request body")
+			t.Fatalf("expected text in request body")
 		}
-		if rf["type"] != "json_object" {
-			t.Fatalf("expected response_format.type json_object, got %v", rf["type"])
+		format, ok := text["format"].(map[string]any)
+		if !ok {
+			t.Fatalf("expected text.format in request body")
+		}
+		if format["type"] != "json_object" {
+			t.Fatalf("expected text.format.type json_object, got %v", format["type"])
 		}
 
 		w.Header().Set("Content-Type", "application/json")
