@@ -27,9 +27,11 @@ func Load() *Config {
 	dbPassword := getEnv("DB_PASSWORD", "")
 	dbName := getEnv("DB_NAME", "edunex")
 
+	dbSSLMode := getEnv("DB_SSLMODE", "disable")
+
 	dbURL := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s",
-		dbUser, dbPassword, dbHost, dbPort, dbName,
+		"postgresql://%s:%s@%s:%s/%s?sslmode=%s",
+		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode,
 	)
 
 	cfg := &Config{

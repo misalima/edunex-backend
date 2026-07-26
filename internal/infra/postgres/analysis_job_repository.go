@@ -9,6 +9,7 @@ import (
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/infra/postgres/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // AnalysisJobRepository handles database operations for analysis jobs
@@ -20,7 +21,6 @@ type AnalysisJobRepository struct {
 func NewAnalysisJobRepository(db *gorm.DB) *AnalysisJobRepository {
 	return &AnalysisJobRepository{db: db}
 }
-
 // UpsertAnalysisJob inserts or updates an analysis job using ON CONFLICT
 // Returns the job ID and error
 func (r *AnalysisJobRepository) UpsertAnalysisJob(ctx context.Context, lessonPlanID uuid.UUID) (uuid.UUID, error) {
@@ -31,6 +31,7 @@ func (r *AnalysisJobRepository) UpsertAnalysisJob(ctx context.Context, lessonPla
 		VALUES (?, ?, ?, 0, now())
 		ON CONFLICT (lesson_plan_id) DO UPDATE SET
 			status = 'pending',
+			
 			attempts = 0,
 			error_message = NULL,
 			created_at = now(),
@@ -59,12 +60,16 @@ func (r *AnalysisJobRepository) UpsertAnalysisJob(ctx context.Context, lessonPla
 
 // FetchPendingJob fetches a single pending job and atomically marks it as processing
 // Uses SELECT FOR UPDATE SKIP LOCKED to avoid race conditions
+// Logs are silenced for this query as it runs frequently during polling fallback
 func (r *AnalysisJobRepository) FetchPendingJob(ctx context.Context) (*domain.AnalysisJob, error) {
 	var job models.AnalysisJobModel
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// Silence logger for this frequent polling query to avoid log pollution
+		txSilent := tx.Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)})
+
 		// Raw query to use SELECT FOR UPDATE SKIP LOCKED
-		if err := tx.Raw(`
+		if err := txSilent.Raw(`
 			SELECT * FROM analysis_jobs
 			WHERE status = 'pending'
 			ORDER BY created_at ASC
