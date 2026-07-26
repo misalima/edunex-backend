@@ -146,7 +146,7 @@ func (h *LessonPlanHandler) GetByID(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Lesson plan ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} response.LessonPlanAnalysisStatusResponse
 // @Failure 400 {object} response.ErrorMessageResponse
 // @Failure 401 {object} response.ErrorResponse
 // @Failure 404 {object} response.ErrorResponse
@@ -164,25 +164,5 @@ func (h *LessonPlanHandler) GetAnalysis(c echo.Context) error {
 		return handleDomainError(c, err)
 	}
 
-	resp := map[string]interface{}{
-		"status":        analysisStatus.Status,
-		"error_message": analysisStatus.ErrorMessage,
-	}
-
-	if analysisStatus.Analysis != nil {
-		resp["analysis"] = map[string]interface{}{
-			"id":              analysisStatus.Analysis.ID.String(),
-			"lesson_plan_id":  analysisStatus.Analysis.LessonPlanID.String(),
-			"title":           analysisStatus.Analysis.Title,
-			"subject":         analysisStatus.Analysis.Subject,
-			"grade_level":     analysisStatus.Analysis.GradeLevel,
-			"alignment_score": analysisStatus.Analysis.AlignmentScore,
-			"feedback":        analysisStatus.Analysis.Feedback,
-			"metadata":        analysisStatus.Analysis.Metadata,
-			"suggestions":     analysisStatus.Analysis.Suggestions,
-			"created_at":      analysisStatus.Analysis.CreatedAt,
-		}
-	}
-
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, response.FromDomainAnalysisStatus(analysisStatus))
 }

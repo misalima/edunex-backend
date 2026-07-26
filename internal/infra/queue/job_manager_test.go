@@ -83,6 +83,10 @@ func (m *mockLessonPlanLoader) UpdateLessonPlan(ctx context.Context, lp *domain.
 	return nil
 }
 
+func (m *mockLessonPlanLoader) DeleteLessonPlan(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
 type mockLessonPlanAnalysisLoader struct {
 	saveFn func(ctx context.Context, analysis *domain.LessonPlanAnalysis) error
 }

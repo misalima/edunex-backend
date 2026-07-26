@@ -97,9 +97,16 @@ func (s *LessonPlanService) CreateLessonPlan(ctx context.Context, lp *domain.Les
 		defer cancel()
 
 		if jobID, err := s.enqueuer.Enqueue(enqueueCtx, createdLP.ID); err != nil {
-			logger.Log.Error("failed to enqueue lesson plan analysis",
+			logger.Log.Error("failed to enqueue lesson plan analysis, performing cleanup",
 				zap.Error(err),
 				zap.String("lesson_plan_id", createdLP.ID.String()))
+			if derr := s.repo.DeleteLessonPlan(ctx, createdLP.ID); derr != nil {
+				logger.Log.Error("cleanup db delete failed", zap.Error(derr), zap.String("lesson_plan_id", createdLP.ID.String()))
+			}
+			if derr := s.storage.Delete(ctx, objectPath); derr != nil {
+				logger.Log.Error("cleanup storage delete failed", zap.Error(derr), zap.String("object_path", objectPath))
+			}
+			return nil, domain_errors.WrapUnexpectedMsg(err, "failed to enqueue analysis job")
 		} else {
 			logger.Log.Info("lesson plan analysis enqueued",
 				zap.String("lesson_plan_id", createdLP.ID.String()),

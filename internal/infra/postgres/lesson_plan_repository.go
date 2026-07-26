@@ -110,3 +110,13 @@ func (r *LessonPlanRepository) UpdateLessonPlan(ctx context.Context, lp *domain.
 	logger.Log.Info("lesson plan updated", zap.String("lesson_plan_id", m.ID.String()), zap.Int64("rows_affected", res.RowsAffected))
 	return nil
 }
+
+func (r *LessonPlanRepository) DeleteLessonPlan(ctx context.Context, id uuid.UUID) error {
+	logger.Log.Info("deleting lesson plan", zap.String("lesson_plan_id", id.String()))
+	res := r.db.WithContext(ctx).Where("id = ?", id).Delete(&models.LessonPlanModel{})
+	if res.Error != nil {
+		logger.Log.Error("failed to delete lesson plan", zap.Error(res.Error), zap.String("lesson_plan_id", id.String()))
+		return domain_errors.WrapUnexpectedMsg(res.Error, "failed to delete lesson plan")
+	}
+	return nil
+}

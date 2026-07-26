@@ -50,19 +50,12 @@ func extractPDF(ctx context.Context, data []byte) (*sec.ExtractionResult, error)
 		return &sec.ExtractionResult{Text: text, Pages: numPages, SourceType: "pdf"}, nil
 	}
 
-	// Respect ctx during the copy: run copy in a goroutine and select on ctx.Done().
-	done := make(chan error, 1)
-	go func() {
-		_, err := io.Copy(&buf, pr)
-		done <- err
-	}()
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case err := <-done:
-		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrExtractionFailed, err)
-		}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	if _, err := io.Copy(&buf, pr); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrExtractionFailed, err)
 	}
 
 	text := normalizeText(buf.String())

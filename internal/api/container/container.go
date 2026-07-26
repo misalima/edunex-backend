@@ -140,10 +140,11 @@ func (c *Container) GetAIProvider() *ai.GroqClient {
 		if c.cfg.GroqAPIKey == "" {
 			panic("GROQ_API_KEY is required")
 		}
-		c.aiProvider = ai.NewGroqClientWithURL(
+		c.aiProvider = ai.NewGroqClientWithConfig(
 			c.cfg.GroqAPIKey,
 			c.cfg.GroqModel,
 			c.cfg.GroqAPIURL,
+			c.cfg.GroqTimeout,
 		)
 	})
 	return c.aiProvider

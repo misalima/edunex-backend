@@ -41,9 +41,14 @@ func NewGroqClient(apiKey, model string) *GroqClient {
 
 // NewGroqClientWithURL builds a GroqClient with custom URL and model.
 func NewGroqClientWithURL(apiKey, model, baseURL string) *GroqClient {
+	return NewGroqClientWithConfig(apiKey, model, baseURL, defaultTimeout)
+}
+
+// NewGroqClientWithConfig builds a GroqClient with custom URL, model, and request timeout.
+func NewGroqClientWithConfig(apiKey, model, baseURL string, timeout time.Duration) *GroqClient {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {
-		panic("ai.NewGroqClientWithURL: apiKey is required")
+		panic("ai.NewGroqClientWithConfig: apiKey is required")
 	}
 
 	if strings.TrimSpace(model) == "" {
@@ -54,16 +59,18 @@ func NewGroqClientWithURL(apiKey, model, baseURL string) *GroqClient {
 		baseURL = groqBaseURL
 	}
 
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
+
 	c := &GroqClient{
 		APIKey:        apiKey,
 		Model:         strings.TrimSpace(model),
 		MaxInputChars: defaultMaxInputChars,
-		Timeout:       defaultTimeout,
+		Timeout:       timeout,
 		baseURL:       strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		httpClient:    &http.Client{},
 	}
-	// Timeout is enforced by request context in Analyze; the client is intentionally
-	// created without a global Timeout to keep context as the single timeout source.
-	c.httpClient = &http.Client{}
 	return c
 }
 
@@ -72,8 +79,10 @@ func (c *GroqClient) Analyze(ctx context.Context, text string) (*secondary.Analy
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	if c.httpClient == nil {
-		c.httpClient = &http.Client{}
+
+	client := c.httpClient
+	if client == nil {
+		client = http.DefaultClient
 	}
 
 	maxChars := c.MaxInputChars
@@ -114,7 +123,7 @@ func (c *GroqClient) Analyze(ctx context.Context, text string) (*secondary.Analy
 	req.Header.Set("Authorization", "Bearer "+c.APIKey)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		if ctxErr := requestCtx.Err(); ctxErr != nil {
 			return nil, ctxErr

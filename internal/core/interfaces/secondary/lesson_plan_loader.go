@@ -12,4 +12,5 @@ type LessonPlanLoader interface {
 	GetLessonPlanByID(ctx context.Context, id uuid.UUID) (*domain.LessonPlan, error)
 	ListLessonPlans(ctx context.Context) ([]*domain.LessonPlan, error)
 	UpdateLessonPlan(ctx context.Context, lp *domain.LessonPlan) error
+	DeleteLessonPlan(ctx context.Context, id uuid.UUID) error
 }

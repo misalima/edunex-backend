@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -18,6 +19,7 @@ type Config struct {
 	GroqAPIKey         string
 	GroqAPIURL         string
 	GroqModel          string
+	GroqTimeout        time.Duration
 }
 
 func Load() *Config {
@@ -34,6 +36,12 @@ func Load() *Config {
 		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode,
 	)
 
+	groqTimeoutStr := getEnv("GROQ_TIMEOUT", "60s")
+	groqTimeout, err := time.ParseDuration(groqTimeoutStr)
+	if err != nil {
+		groqTimeout = 60 * time.Second
+	}
+
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
 		DBURL:              dbURL,
@@ -46,6 +54,7 @@ func Load() *Config {
 		GroqAPIKey:         getEnv("GROQ_API_KEY", ""),
 		GroqAPIURL:         getEnv("GROQ_API_URL", ""),
 		GroqModel:          getEnv("GROQ_MODEL", ""),
+		GroqTimeout:        groqTimeout,
 	}
 
 	validateRequired(cfg)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/misalima/edunex-backend/internal/api/handlers/dto/response"
 	"github.com/misalima/edunex-backend/internal/core/domain_errors"
 	"github.com/misalima/edunex-backend/internal/infra/logger"
 	"github.com/misalima/edunex-backend/internal/infra/queue"
@@ -27,7 +28,7 @@ func NewAnalysisJobHandler(jobManager *queue.JobManager) *AnalysisJobHandler {
 // @Produce json
 // @Security BearerAuth
 // @Param lesson_plan_id path string true "Lesson plan ID"
-// @Success 202 {object} map[string]string
+// @Success 202 {object} response.EnqueueAnalysisResponse
 // @Failure 400 {object} response.ErrorMessageResponse
 // @Failure 401 {object} response.ErrorResponse
 // @Failure 404 {object} response.ErrorResponse
@@ -58,10 +59,10 @@ func (h *AnalysisJobHandler) Analyze(c echo.Context) error {
 		zap.String("job_id", jobID.String()),
 		zap.String("lesson_plan_id", lessonPlanID.String()))
 
-	return c.JSON(http.StatusAccepted, map[string]string{
-		"job_id":         jobID.String(),
-		"lesson_plan_id": lessonPlanID.String(),
-		"status":         "pending",
+	return c.JSON(http.StatusAccepted, &response.EnqueueAnalysisResponse{
+		JobID:        jobID.String(),
+		LessonPlanID: lessonPlanID.String(),
+		Status:       "pending",
 	})
 }
 
@@ -72,7 +73,7 @@ func (h *AnalysisJobHandler) Analyze(c echo.Context) error {
 // @Produce json
 // @Security BearerAuth
 // @Param job_id path string true "Job ID"
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} response.AnalysisJobResponse
 // @Failure 400 {object} response.ErrorMessageResponse
 // @Failure 401 {object} response.ErrorResponse
 // @Failure 404 {object} response.ErrorResponse
@@ -99,18 +100,7 @@ func (h *AnalysisJobHandler) GetJobStatus(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "job not found"})
 	}
 
-	resp := map[string]interface{}{
-		"job_id":         job.ID.String(),
-		"lesson_plan_id": job.LessonPlanID.String(),
-		"status":         job.Status,
-		"attempts":       job.Attempts,
-		"error_message":  job.ErrorMessage,
-		"created_at":     job.CreatedAt,
-		"started_at":     job.StartedAt,
-		"finished_at":    job.FinishedAt,
-	}
-
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, response.FromDomainAnalysisJob(job))
 }
 
 // GetMetrics godoc
@@ -119,7 +109,7 @@ func (h *AnalysisJobHandler) GetJobStatus(c echo.Context) error {
 // @Tags Analysis
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
+// @Success 200 {object} response.JobMetricsResponse
 // @Failure 401 {object} response.ErrorResponse
 // @Failure 500 {object} response.ErrorResponse
 // @Router /analysis-jobs/metrics [get]
@@ -129,5 +119,30 @@ func (h *AnalysisJobHandler) GetMetrics(c echo.Context) error {
 	logger.Log.Debug("job metrics retrieved",
 		zap.Any("metrics", metrics))
 
-	return c.JSON(http.StatusOK, metrics)
+	dbStats, _ := metrics["db_stats"].(map[string]int64)
+
+	resp := &response.JobMetricsResponse{
+		ProcessedJobs:  getInt64Metric(metrics, "processed_jobs"),
+		SuccessfulJobs: getInt64Metric(metrics, "successful_jobs"),
+		FailedJobs:     getInt64Metric(metrics, "failed_jobs"),
+		RetriedJobs:    getInt64Metric(metrics, "retried_jobs"),
+		ActiveWorkers:  getIntMetric(metrics, "active_workers"),
+		DbStats:        dbStats,
+	}
+
+	return c.JSON(http.StatusOK, resp)
+}
+
+func getInt64Metric(m map[string]interface{}, key string) int64 {
+	if val, ok := m[key].(int64); ok {
+		return val
+	}
+	return 0
+}
+
+func getIntMetric(m map[string]interface{}, key string) int {
+	if val, ok := m[key].(int); ok {
+		return val
+	}
+	return 0
 }
