@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -123,6 +124,7 @@ func TestAuthService_Authenticate_UserExistsInDB(t *testing.T) {
 	}
 
 	svc := services.NewAuthService(mockJWT, mockRepo)
+	defer svc.Close()
 
 	claims, err := svc.Authenticate(context.Background(), "valid-token")
 	if err != nil {
@@ -167,6 +169,7 @@ func TestAuthService_Authenticate_LazySyncsNewUser(t *testing.T) {
 	}
 
 	svc := services.NewAuthService(mockJWT, mockRepo)
+	defer svc.Close()
 
 	claims, err := svc.Authenticate(context.Background(), "valid-token")
 	if err != nil {
@@ -220,7 +223,8 @@ func TestAuthService_Authenticate_CacheHit(t *testing.T) {
 		},
 	}
 
-	svc := services.NewAuthServiceWithTTL(mockJWT, mockRepo, 1*time.Minute)
+	svc := services.NewAuthServiceWithTTL(mockJWT, mockRepo, 1*time.Minute, 0)
+	defer svc.Close()
 
 	// First call - cache miss, hits DB
 	claims1, err := svc.Authenticate(context.Background(), "token")
@@ -247,6 +251,118 @@ func TestAuthService_Authenticate_CacheHit(t *testing.T) {
 	}
 }
 
+func TestAuthService_Authenticate_CacheStampedeSingleflight(t *testing.T) {
+	userID := uuid.New()
+	email := "concurrent@edunex.com"
+
+	mockJWT := &mockJWTValidator{
+		validateTokenFn: func(token string) (*util.TokenClaims, error) {
+			return &util.TokenClaims{
+				UserID: userID.String(),
+				Email:  email,
+			}, nil
+		},
+	}
+
+	mockRepo := &mockUserLoader{
+		existsFn: func(ctx context.Context, id uuid.UUID) (bool, error) {
+			// Simulate slight DB latency
+			time.Sleep(30 * time.Millisecond)
+			return true, nil
+		},
+	}
+
+	svc := services.NewAuthServiceWithTTL(mockJWT, mockRepo, 5*time.Minute, 0)
+	defer svc.Close()
+
+	const concurrentRequests = 20
+	var wg sync.WaitGroup
+	errs := make(chan error, concurrentRequests)
+
+	for i := 0; i < concurrentRequests; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			claims, err := svc.Authenticate(context.Background(), "concurrent-token")
+			if err != nil {
+				errs <- err
+				return
+			}
+			if claims.UserID != userID.String() {
+				errs <- errors.New("mismatched user id")
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent request failed: %v", err)
+		}
+	}
+
+	// Because of singleflight, even with 20 simultaneous requests, only 1 DB check should occur!
+	if calls := mockRepo.existsCalls.Load(); calls != 1 {
+		t.Errorf("expected exactly 1 DB Exists call due to singleflight deduplication, got %d", calls)
+	}
+}
+
+func TestAuthService_CleanupExpired(t *testing.T) {
+	userID1 := uuid.New()
+	userID2 := uuid.New()
+
+	mockJWT := &mockJWTValidator{
+		validateTokenFn: func(token string) (*util.TokenClaims, error) {
+			if token == "token1" {
+				return &util.TokenClaims{UserID: userID1.String(), Email: "u1@edunex.com"}, nil
+			}
+			return &util.TokenClaims{UserID: userID2.String(), Email: "u2@edunex.com"}, nil
+		},
+	}
+
+	mockRepo := &mockUserLoader{
+		existsFn: func(ctx context.Context, id uuid.UUID) (bool, error) {
+			return true, nil
+		},
+	}
+
+	// Short TTL of 50ms for testing
+	svc := services.NewAuthServiceWithTTL(mockJWT, mockRepo, 50*time.Millisecond, 0)
+	defer svc.Close()
+
+	// Authenticate user 1
+	_, err := svc.Authenticate(context.Background(), "token1")
+	if err != nil {
+		t.Fatalf("auth user 1 failed: %v", err)
+	}
+	if svc.CacheSize() != 1 {
+		t.Errorf("expected cache size 1, got %d", svc.CacheSize())
+	}
+
+	// Wait for user 1 entry to expire
+	time.Sleep(60 * time.Millisecond)
+
+	// Authenticate user 2 (fresh entry)
+	_, err = svc.Authenticate(context.Background(), "token2")
+	if err != nil {
+		t.Fatalf("auth user 2 failed: %v", err)
+	}
+	if svc.CacheSize() != 2 {
+		t.Errorf("expected cache size 2, got %d", svc.CacheSize())
+	}
+
+	// Run cleanup
+	purged := svc.CleanupExpired()
+	if purged != 1 {
+		t.Errorf("expected 1 expired entry to be purged, got %d", purged)
+	}
+	if svc.CacheSize() != 1 {
+		t.Errorf("expected remaining cache size 1, got %d", svc.CacheSize())
+	}
+}
+
 func TestAuthService_Authenticate_InvalidToken(t *testing.T) {
 	mockJWT := &mockJWTValidator{
 		validateTokenFn: func(token string) (*util.TokenClaims, error) {
@@ -256,6 +372,7 @@ func TestAuthService_Authenticate_InvalidToken(t *testing.T) {
 
 	mockRepo := &mockUserLoader{}
 	svc := services.NewAuthService(mockJWT, mockRepo)
+	defer svc.Close()
 
 	claims, err := svc.Authenticate(context.Background(), "bad-token")
 	if err == nil {
@@ -284,6 +401,7 @@ func TestAuthService_Authenticate_InvalidUserID(t *testing.T) {
 
 	mockRepo := &mockUserLoader{}
 	svc := services.NewAuthService(mockJWT, mockRepo)
+	defer svc.Close()
 
 	claims, err := svc.Authenticate(context.Background(), "token")
 	if err == nil {
@@ -318,6 +436,7 @@ func TestAuthService_Authenticate_DBError(t *testing.T) {
 	}
 
 	svc := services.NewAuthService(mockJWT, mockRepo)
+	defer svc.Close()
 
 	claims, err := svc.Authenticate(context.Background(), "token")
 	if err == nil {
@@ -352,6 +471,7 @@ func TestAuthService_Authenticate_UpsertError(t *testing.T) {
 	}
 
 	svc := services.NewAuthService(mockJWT, mockRepo)
+	defer svc.Close()
 
 	claims, err := svc.Authenticate(context.Background(), "token")
 	if err == nil {
