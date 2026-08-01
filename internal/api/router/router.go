@@ -15,8 +15,8 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 	e.GET("/health", c.GetHealthHandler().HealthHandler)
 
 	v1 := e.Group("/api/v1")
+	v1.Use(middleware.AuthMiddleware(c.GetAuthenticator()))
 	v1.GET("/me", c.GetUserHandler().GetMe)
-	v1.Use(middleware.AuthMiddleware(c.GetJWTManager()))
 
 	// Users
 	userGroup := v1.Group("/users")

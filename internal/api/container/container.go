@@ -31,6 +31,9 @@ type Container struct {
 	userSvcOnce sync.Once
 	userService *services.UserService
 
+	authSvcOnce sync.Once
+	authService *services.AuthService
+
 	userHdlOnce sync.Once
 	userHandler *handlers.UserHandler
 
@@ -91,6 +94,19 @@ func (c *Container) GetUserManager() primary.UserManager {
 	return c.GetUserService()
 }
 
+func (c *Container) GetAuthService() *services.AuthService {
+	c.authSvcOnce.Do(func() {
+		jwtValidator := c.GetJWTManager()
+		userRepo := postgres.NewGormUserRepository(c.db)
+		c.authService = services.NewAuthService(jwtValidator, userRepo)
+	})
+	return c.authService
+}
+
+func (c *Container) GetAuthenticator() primary.Authenticator {
+	return c.GetAuthService()
+}
+
 func (c *Container) GetStorageClient() *supabase.Client {
 	c.storageOnce.Do(func() {
 		// Use cfg instead of os.Getenv
@@ -109,8 +125,7 @@ func (c *Container) GetStorageClient() *supabase.Client {
 func (c *Container) GetUserHandler() *handlers.UserHandler {
 	c.userHdlOnce.Do(func() {
 		svc := c.GetUserService()
-		jwt := c.GetJWTManager()
-		c.userHandler = handlers.NewUserHandler(svc, jwt)
+		c.userHandler = handlers.NewUserHandler(svc)
 	})
 	return c.userHandler
 }
