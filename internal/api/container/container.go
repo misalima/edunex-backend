@@ -3,7 +3,9 @@ package container
 import (
 	"fmt"
 	"sync"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/cmd/app/config"
 	"github.com/misalima/edunex-backend/internal/api/handlers"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
@@ -14,6 +16,7 @@ import (
 	"github.com/misalima/edunex-backend/internal/infra/queue"
 	"github.com/misalima/edunex-backend/internal/infra/security"
 	supabase "github.com/misalima/edunex-backend/internal/infra/storage"
+	wsInfra "github.com/misalima/edunex-backend/internal/infra/websocket"
 	"gorm.io/gorm"
 )
 
@@ -54,6 +57,15 @@ type Container struct {
 
 	analysisJobHdlOnce sync.Once
 	analysisJobHdl     *handlers.AnalysisJobHandler
+
+	wsHubOnce sync.Once
+	wsHub     *wsInfra.Hub
+
+	wsTicketsOnce sync.Once
+	wsTickets     *wsInfra.TicketStore
+
+	wsHdlOnce sync.Once
+	wsHandler *handlers.WsHandler
 }
 
 func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
@@ -182,7 +194,7 @@ func (c *Container) GetJobManager() *queue.JobManager {
 		analysisRepo := postgres.NewLessonPlanAnalysisRepository(c.db)
 		analysisJobRepo := postgres.NewAnalysisJobRepository(c.db)
 
-		c.jobManager = queue.NewJobManager(
+		jm := queue.NewJobManager(
 			c.db,
 			c.cfg.DBURL,
 			cfg,
@@ -192,6 +204,19 @@ func (c *Container) GetJobManager() *queue.JobManager {
 			analysisRepo,
 			analysisJobRepo,
 		)
+
+		// Injeta o callback que conecta o JobManager ao WebSocket Hub
+		hub := c.GetWsHub()
+		jm.SetStatusUpdateCallback(func(userID, lessonPlanID uuid.UUID, status string) {
+			hub.BroadcastToUser(userID, map[string]interface{}{
+				"type":           "analysis_status",
+				"lesson_plan_id": lessonPlanID.String(),
+				"status":         status,
+				"timestamp":      time.Now().Format(time.RFC3339),
+			})
+		})
+
+		c.jobManager = jm
 	})
 	return c.jobManager
 }
@@ -204,9 +229,34 @@ func (c *Container) GetAnalysisJobHandler() *handlers.AnalysisJobHandler {
 	return c.analysisJobHdl
 }
 
+func (c *Container) GetWsHub() *wsInfra.Hub {
+	c.wsHubOnce.Do(func() {
+		c.wsHub = wsInfra.NewHub()
+		c.wsHub.Start() // Inicia o event loop do Hub de WS
+	})
+	return c.wsHub
+}
+
+func (c *Container) GetWsTicketStore() *wsInfra.TicketStore {
+	c.wsTicketsOnce.Do(func() {
+		c.wsTickets = wsInfra.NewTicketStore()
+	})
+	return c.wsTickets
+}
+
+func (c *Container) GetWsHandler() *handlers.WsHandler {
+	c.wsHdlOnce.Do(func() {
+		c.wsHandler = handlers.NewWsHandler(c.GetWsHub(), c.GetWsTicketStore())
+	})
+	return c.wsHandler
+}
+
 func (c *Container) Close() {
 	if c.authService != nil {
 		c.authService.Close()
+	}
+	if c.wsHub != nil {
+		c.wsHub.Stop()
 	}
 }
 

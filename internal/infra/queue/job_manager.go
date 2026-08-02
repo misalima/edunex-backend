@@ -34,6 +34,9 @@ func DefaultJobManagerConfig() *JobManagerConfig {
 	}
 }
 
+// StatusUpdateCallback is triggered when a job transitions its state.
+type StatusUpdateCallback func(userID uuid.UUID, lessonPlanID uuid.UUID, status string)
+
 // JobManager orchestrates job processing with worker pool and notification system
 type JobManager struct {
 	db              *gorm.DB
@@ -52,6 +55,7 @@ type JobManager struct {
 	isRunning       bool
 	metrics         *JobMetrics
 	pollTicker      *time.Ticker
+	onStatusUpdate  StatusUpdateCallback
 	mu              sync.RWMutex
 }
 
@@ -94,6 +98,13 @@ func NewJobManager(
 		cancel:          cancel,
 		metrics:         &JobMetrics{},
 	}
+}
+
+// SetStatusUpdateCallback sets the status update callback.
+func (jm *JobManager) SetStatusUpdateCallback(cb StatusUpdateCallback) {
+	jm.mu.Lock()
+	defer jm.mu.Unlock()
+	jm.onStatusUpdate = cb
 }
 
 // Start initializes the worker pool and notification listener
@@ -314,6 +325,14 @@ func (jm *JobManager) processJobWithData(job *domain.AnalysisJob, workerID int) 
 		return
 	}
 
+	// Trigger broadcast to websocket that analysis is active in a worker
+	jm.mu.RLock()
+	cb := jm.onStatusUpdate
+	jm.mu.RUnlock()
+	if cb != nil {
+		cb(lessonPlan.UserID, job.LessonPlanID, "processing")
+	}
+
 	// Extract content from file
 	content, err := jm.extractors.ExtractFromStorage(jm.ctx, lessonPlan.FilePath)
 	if err != nil {
@@ -349,6 +368,14 @@ func (jm *JobManager) processJobWithData(job *domain.AnalysisJob, workerID int) 
 		return
 	}
 
+	// Trigger broadcast that analysis finished successfully
+	jm.mu.RLock()
+	cb = jm.onStatusUpdate
+	jm.mu.RUnlock()
+	if cb != nil {
+		cb(lessonPlan.UserID, job.LessonPlanID, "done")
+	}
+
 	jm.metrics.SuccessfulJobs.Add(1)
 	jm.metrics.ProcessedJobs.Add(1)
 
@@ -368,6 +395,24 @@ func (jm *JobManager) handleJobFailure(jobID uuid.UUID, errorMsg string) {
 
 	jm.metrics.FailedJobs.Add(1)
 	jm.metrics.ProcessedJobs.Add(1)
+
+	// Fetch job to get lessonPlanID and check owner user for websocket notify
+	if job, err := jm.analysisJobRepo.GetJobByID(jm.ctx, jobID); err == nil && job != nil {
+		if lp, err := jm.lessonPlanRepo.GetLessonPlanByID(jm.ctx, job.LessonPlanID); err == nil && lp != nil {
+			jm.mu.RLock()
+			cb := jm.onStatusUpdate
+			jm.mu.RUnlock()
+			if cb != nil {
+				// Se atingiu o número máximo de tentativas, sinaliza como "failed" definitivo.
+				// Caso contrário, continua como "pending" (esperando retry)
+				status := "failed"
+				if job.Attempts < jm.config.MaxAttempts {
+					status = "pending"
+				}
+				cb(lp.UserID, lp.ID, status)
+			}
+		}
+	}
 }
 
 // pollFallback periodically polls for pending jobs as a fallback when notifications fail.

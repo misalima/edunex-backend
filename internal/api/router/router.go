@@ -14,9 +14,13 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 	// Rotas públicas
 	e.GET("/health", c.GetHealthHandler().HealthHandler)
 
+	// WebSocket: ticket is a short-lived single-use token (never put the JWT in the URL).
+	e.GET("/api/v1/ws/lesson-plans", c.GetWsHandler().ConnectWs)
+
 	v1 := e.Group("/api/v1")
 	v1.Use(middleware.AuthMiddleware(c.GetAuthenticator()))
 	v1.GET("/me", c.GetUserHandler().GetMe)
+	v1.POST("/ws/ticket", c.GetWsHandler().IssueTicket)
 
 	// Users
 	userGroup := v1.Group("/users")

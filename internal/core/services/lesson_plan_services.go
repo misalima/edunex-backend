@@ -170,6 +170,9 @@ func (s *LessonPlanService) DeleteLessonPlan(ctx context.Context, userID uuid.UU
 	if err != nil {
 		return err
 	}
+	if lp == nil {
+		return domain_errors.NewNotFoundMsg("lesson plan not found")
+	}
 	if lp.UserID != userID {
 		return domain_errors.NewNotFoundMsg("lesson plan not found")
 	}
