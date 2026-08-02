@@ -52,6 +52,35 @@ func (mr *MockLessonPlanManagerMockRecorder) CreateLessonPlan(ctx, lp, fileReade
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateLessonPlan", reflect.TypeOf((*MockLessonPlanManager)(nil).CreateLessonPlan), ctx, lp, fileReader, filename, contentType)
 }
 
+// DeleteLessonPlan mocks base method.
+func (m *MockLessonPlanManager) DeleteLessonPlan(ctx context.Context, userID, lessonPlanID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteLessonPlan", ctx, userID, lessonPlanID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteLessonPlan indicates an expected call of DeleteLessonPlan.
+func (mr *MockLessonPlanManagerMockRecorder) DeleteLessonPlan(ctx, userID, lessonPlanID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteLessonPlan", reflect.TypeOf((*MockLessonPlanManager)(nil).DeleteLessonPlan), ctx, userID, lessonPlanID)
+}
+
+// GetAnalysisStatus mocks base method.
+func (m *MockLessonPlanManager) GetAnalysisStatus(ctx context.Context, lessonPlanID uuid.UUID) (*domain.LessonPlanAnalysisStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAnalysisStatus", ctx, lessonPlanID)
+	ret0, _ := ret[0].(*domain.LessonPlanAnalysisStatus)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAnalysisStatus indicates an expected call of GetAnalysisStatus.
+func (mr *MockLessonPlanManagerMockRecorder) GetAnalysisStatus(ctx, lessonPlanID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAnalysisStatus", reflect.TypeOf((*MockLessonPlanManager)(nil).GetAnalysisStatus), ctx, lessonPlanID)
+}
+
 // GetLessonPlanWithSignedURL mocks base method.
 func (m *MockLessonPlanManager) GetLessonPlanWithSignedURL(ctx context.Context, id uuid.UUID) (*domain.LessonPlan, string, error) {
 	m.ctrl.T.Helper()
@@ -69,17 +98,18 @@ func (mr *MockLessonPlanManagerMockRecorder) GetLessonPlanWithSignedURL(ctx, id 
 }
 
 // ListLessonPlansWithSignedURLs mocks base method.
-func (m *MockLessonPlanManager) ListLessonPlansWithSignedURLs(ctx context.Context) ([]*domain.LessonPlan, map[string]string, error) {
+func (m *MockLessonPlanManager) ListLessonPlansWithSignedURLs(ctx context.Context, userID uuid.UUID, params domain.PaginationParams) ([]*domain.LessonPlan, map[string]string, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListLessonPlansWithSignedURLs", ctx)
+	ret := m.ctrl.Call(m, "ListLessonPlansWithSignedURLs", ctx, userID, params)
 	ret0, _ := ret[0].([]*domain.LessonPlan)
 	ret1, _ := ret[1].(map[string]string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(int64)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // ListLessonPlansWithSignedURLs indicates an expected call of ListLessonPlansWithSignedURLs.
-func (mr *MockLessonPlanManagerMockRecorder) ListLessonPlansWithSignedURLs(ctx interface{}) *gomock.Call {
+func (mr *MockLessonPlanManagerMockRecorder) ListLessonPlansWithSignedURLs(ctx, userID, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLessonPlansWithSignedURLs", reflect.TypeOf((*MockLessonPlanManager)(nil).ListLessonPlansWithSignedURLs), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListLessonPlansWithSignedURLs", reflect.TypeOf((*MockLessonPlanManager)(nil).ListLessonPlansWithSignedURLs), ctx, userID, params)
 }

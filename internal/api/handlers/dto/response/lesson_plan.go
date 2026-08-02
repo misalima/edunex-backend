@@ -18,6 +18,13 @@ type LessonPlanResponse struct {
 	DownloadURL string    `json:"download_url,omitempty" example:"https://storage.example.com/signed-url"`
 }
 
+type PaginatedLessonPlanResponse struct {
+	Items  []*LessonPlanResponse `json:"items"`
+	Total  int64                 `json:"total" example:"47"`
+	Limit  int                   `json:"limit" example:"20"`
+	Offset int                   `json:"offset" example:"0"`
+}
+
 func FromDomainLessonPlanToResponse(lp *domain.LessonPlan) *LessonPlanResponse {
 	if lp == nil {
 		return nil

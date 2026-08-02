@@ -65,19 +65,50 @@ func (r *LessonPlanRepository) GetLessonPlanByID(ctx context.Context, id uuid.UU
 	return m.ToDomain(), nil
 }
 
-func (r *LessonPlanRepository) ListLessonPlans(ctx context.Context) ([]*domain.LessonPlan, error) {
-	logger.Log.Debug("listing lesson plans")
-	var dbModels []models.LessonPlanModel
-	if err := r.db.WithContext(ctx).Order("created_at desc").Find(&dbModels).Error; err != nil {
-		logger.Log.Error("failed to list lesson plans", zap.Error(err))
-		return nil, domain_errors.WrapUnexpectedMsg(err, "failed to list lesson plans")
+func (r *LessonPlanRepository) ListLessonPlans(ctx context.Context, userID uuid.UUID, params domain.PaginationParams) ([]*domain.LessonPlan, int64, error) {
+	logger.Log.Debug("listing lesson plans",
+		zap.String("user_id", userID.String()),
+		zap.Int("limit", params.Limit),
+		zap.Int("offset", params.Offset),
+	)
+
+	var total int64
+	if err := r.db.WithContext(ctx).
+		Model(&models.LessonPlanModel{}).
+		Where("user_id = ?", userID).
+		Count(&total).Error; err != nil {
+		logger.Log.Error("failed to count lesson plans", zap.Error(err), zap.String("user_id", userID.String()))
+		return nil, 0, domain_errors.WrapUnexpectedMsg(err, "failed to count lesson plans")
 	}
-	logger.Log.Info("lesson plans listed", zap.Int("count", len(dbModels)))
+
+	var dbModels []models.LessonPlanModel
+	query := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at desc")
+
+	if params.Limit > 0 {
+		query = query.Limit(params.Limit)
+	}
+	if params.Offset > 0 {
+		query = query.Offset(params.Offset)
+	}
+
+	if err := query.Find(&dbModels).Error; err != nil {
+		logger.Log.Error("failed to list lesson plans", zap.Error(err), zap.String("user_id", userID.String()))
+		return nil, 0, domain_errors.WrapUnexpectedMsg(err, "failed to list lesson plans")
+	}
+
+	logger.Log.Info("lesson plans listed",
+		zap.String("user_id", userID.String()),
+		zap.Int("count", len(dbModels)),
+		zap.Int64("total", total),
+	)
+
 	out := make([]*domain.LessonPlan, len(dbModels))
 	for i := range dbModels {
 		out[i] = dbModels[i].ToDomain()
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (r *LessonPlanRepository) UpdateLessonPlan(ctx context.Context, lp *domain.LessonPlan) error {

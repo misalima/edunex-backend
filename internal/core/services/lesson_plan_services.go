@@ -139,10 +139,10 @@ func (s *LessonPlanService) GetLessonPlanWithSignedURL(ctx context.Context, id u
 	return lp, signedURL, nil
 }
 
-func (s *LessonPlanService) ListLessonPlansWithSignedURLs(ctx context.Context) ([]*domain.LessonPlan, map[string]string, error) {
-	lps, err := s.repo.ListLessonPlans(ctx)
+func (s *LessonPlanService) ListLessonPlansWithSignedURLs(ctx context.Context, userID uuid.UUID, params domain.PaginationParams) ([]*domain.LessonPlan, map[string]string, int64, error) {
+	lps, total, err := s.repo.ListLessonPlans(ctx, userID, params)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, 0, err
 	}
 
 	urls := make(map[string]string, len(lps))
@@ -158,7 +158,43 @@ func (s *LessonPlanService) ListLessonPlansWithSignedURLs(ctx context.Context) (
 		urls[lp.ID.String()] = signed
 	}
 
-	return lps, urls, nil
+	return lps, urls, total, nil
+}
+
+func (s *LessonPlanService) DeleteLessonPlan(ctx context.Context, userID uuid.UUID, lessonPlanID uuid.UUID) error {
+	if lessonPlanID == uuid.Nil {
+		return domain_errors.NewBadRequestMsg("lesson plan id is required")
+	}
+
+	lp, err := s.repo.GetLessonPlanByID(ctx, lessonPlanID)
+	if err != nil {
+		return err
+	}
+	if lp.UserID != userID {
+		return domain_errors.NewNotFoundMsg("lesson plan not found")
+	}
+
+	if err := s.storage.Delete(ctx, lp.FilePath); err != nil {
+		logger.Log.Error("failed to delete file from storage, proceeding with db deletion",
+			zap.Error(err),
+			zap.String("lesson_plan_id", lessonPlanID.String()),
+			zap.String("file_path", lp.FilePath),
+		)
+	}
+
+	if err := s.repo.DeleteLessonPlan(ctx, lessonPlanID); err != nil {
+		logger.Log.Error("failed to delete lesson plan from db",
+			zap.Error(err),
+			zap.String("lesson_plan_id", lessonPlanID.String()),
+		)
+		return err
+	}
+
+	logger.Log.Info("lesson plan deleted",
+		zap.String("lesson_plan_id", lessonPlanID.String()),
+		zap.String("user_id", userID.String()),
+	)
+	return nil
 }
 
 func (s *LessonPlanService) GetAnalysisStatus(ctx context.Context, lessonPlanID uuid.UUID) (*domain.LessonPlanAnalysisStatus, error) {

@@ -49,7 +49,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.UpdateRoleRequest"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateRoleRequest"
                         }
                     }
                 ],
@@ -57,31 +57,126 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.MessageResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorMessageResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/analysis-jobs/metrics": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns job processing metrics and statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analysis"
+                ],
+                "summary": "Get job metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.JobMetricsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/analysis-jobs/{job_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the status of an analysis job",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analysis"
+                ],
+                "summary": "Get analysis job status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Job ID",
+                        "name": "job_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.AnalysisJobResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -101,7 +196,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handlers.HealthResponse"
+                            "$ref": "#/definitions/internal_api_handlers.HealthResponse"
                         }
                     }
                 }
@@ -114,7 +209,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all lesson plans with signed download URLs when available.",
+                "description": "Returns lesson plans for the authenticated user with pagination and signed URLs.",
                 "produces": [
                     "application/json"
                 ],
@@ -122,26 +217,37 @@ const docTemplate = `{
                     "Lesson Plans"
                 ],
                 "summary": "List lesson plans",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Max items per page (1-100, default 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Number of items to skip (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/response.LessonPlanResponse"
-                            }
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.PaginatedLessonPlanResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -201,25 +307,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/response.LessonPlanResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorMessageResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -253,31 +359,200 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.LessonPlanResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorMessageResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a lesson plan, its file, and associated analyses.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Lesson Plans"
+                ],
+                "summary": "Delete a lesson plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Lesson plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/lesson-plans/{id}/analysis": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the status and structured pedagogical analysis when ready.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Lesson Plans"
+                ],
+                "summary": "Get pedagogical analysis for a lesson plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Lesson plan ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/lesson-plans/{lesson_plan_id}/analyze": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Enqueues a lesson plan for AI analysis processing in background",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Analysis"
+                ],
+                "summary": "Analyze lesson plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Lesson plan ID",
+                        "name": "lesson_plan_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.EnqueueAnalysisResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -290,7 +565,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the authenticated user's profile, creating it from Supabase data when needed.",
+                "description": "Returns the authenticated user's profile.",
                 "produces": [
                     "application/json"
                 ],
@@ -302,19 +577,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.UserResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -341,20 +622,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/response.UserResponse"
+                                "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -388,31 +669,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/response.UserResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorMessageResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -448,7 +729,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.UpdateUserRequest"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateUserRequest"
                         }
                     }
                 ],
@@ -462,25 +743,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorMessageResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/response.ErrorResponse"
+                            "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse"
                         }
                     }
                 }
@@ -488,20 +769,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handlers.HealthResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "API is running correctly!"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "ok"
-                }
-            }
-        },
-        "request.UpdateRoleRequest": {
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateRoleRequest": {
             "type": "object",
             "required": [
                 "role",
@@ -518,7 +786,7 @@ const docTemplate = `{
                 }
             }
         },
-        "request.UpdateUserRequest": {
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -527,7 +795,61 @@ const docTemplate = `{
                 }
             }
         },
-        "response.ErrorMessageResponse": {
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.AnalysisJobResponse": {
+            "type": "object",
+            "properties": {
+                "attempts": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-05-16T15:30:00Z"
+                },
+                "error_message": {
+                    "type": "string",
+                    "example": "API timeout"
+                },
+                "finished_at": {
+                    "type": "string",
+                    "example": "2026-05-16T15:30:05Z"
+                },
+                "job_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "lesson_plan_id": {
+                    "type": "string",
+                    "example": "11111111-1111-1111-1111-111111111111"
+                },
+                "started_at": {
+                    "type": "string",
+                    "example": "2026-05-16T15:30:01Z"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "processing"
+                }
+            }
+        },
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.EnqueueAnalysisResponse": {
+            "type": "object",
+            "properties": {
+                "job_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "lesson_plan_id": {
+                    "type": "string",
+                    "example": "11111111-1111-1111-1111-111111111111"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                }
+            }
+        },
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -536,7 +858,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.ErrorResponse": {
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse": {
             "type": "object",
             "properties": {
                 "code": {
@@ -549,7 +871,100 @@ const docTemplate = `{
                 }
             }
         },
-        "response.LessonPlanResponse": {
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.JobMetricsResponse": {
+            "type": "object",
+            "properties": {
+                "active_workers": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "db_stats": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "failed_jobs": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "processed_jobs": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "retried_jobs": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "successful_jobs": {
+                    "type": "integer",
+                    "example": 40
+                }
+            }
+        },
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisResponse": {
+            "type": "object",
+            "properties": {
+                "alignment_score": {
+                    "type": "integer",
+                    "example": 85
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-05-16T15:30:00Z"
+                },
+                "feedback": {
+                    "type": "string",
+                    "example": "O plano está bem estruturado..."
+                },
+                "grade_level": {
+                    "type": "string",
+                    "example": "1ª SÉRIE"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "lesson_plan_id": {
+                    "type": "string",
+                    "example": "11111111-1111-1111-1111-111111111111"
+                },
+                "metadata": {
+                    "type": "string",
+                    "example": "{\"objectives\": [\"Utilizar números inteiros\"]}"
+                },
+                "subject": {
+                    "type": "string",
+                    "example": "Matemática"
+                },
+                "suggestions": {
+                    "type": "string",
+                    "example": "[\"Adicionar atividades práticas\"]"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Plano de aula de Matemática"
+                }
+            }
+        },
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisStatusResponse": {
+            "type": "object",
+            "properties": {
+                "analysis": {
+                    "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisResponse"
+                },
+                "error_message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "status": {
+                    "type": "string",
+                    "example": "done"
+                }
+            }
+        },
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -590,7 +1005,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.MessageResponse": {
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.MessageResponse": {
             "type": "object",
             "properties": {
                 "message": {
@@ -599,7 +1014,30 @@ const docTemplate = `{
                 }
             }
         },
-        "response.UserResponse": {
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.PaginatedLessonPlanResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "offset": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 47
+                }
+            }
+        },
+        "github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -625,6 +1063,19 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2026-05-16T15:30:00Z"
+                }
+            }
+        },
+        "internal_api_handlers.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "API is running correctly!"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
                 }
             }
         }
