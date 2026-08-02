@@ -94,7 +94,7 @@ func (h *Hub) Stop() {
 	for userID, userClients := range h.clients {
 		for client := range userClients {
 			client.closeSend()
-			client.conn.Close()
+			_ = client.conn.Close()
 			delete(userClients, client)
 		}
 		delete(h.clients, userID)
@@ -132,6 +132,6 @@ func (h *Hub) BroadcastToUser(userID uuid.UUID, message interface{}) {
 			zap.String("user_id", userID.String()),
 			zap.String("remote_addr", client.conn.RemoteAddr().String()))
 		h.Unregister(client)
-		client.conn.Close()
+		_ = client.conn.Close()
 	}
 }

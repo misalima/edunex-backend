@@ -74,13 +74,18 @@ func (c *Client) closeSend() {
 func (c *Client) ReadPump() {
 	defer func() {
 		c.hub.Unregister(c)
-		c.conn.Close()
+		_ = c.conn.Close()
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+		logger.Log.Error("WS failed to set read deadline", zap.Error(err), zap.String("user_id", c.userID.String()))
+		return
+	}
 	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -100,39 +105,62 @@ func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		_ = c.conn.Close()
 	}()
 
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				logger.Log.Error("WS failed to set write deadline", zap.Error(err), zap.String("user_id", c.userID.String()))
+				return
+			}
 			if !ok {
 				// O Hub fechou o canal send
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				if err := c.conn.WriteMessage(websocket.CloseMessage, []byte{}); err != nil {
+					logger.Log.Debug("WS failed to write close message", zap.Error(err), zap.String("user_id", c.userID.String()))
+				}
 				return
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				logger.Log.Error("WS failed to get next writer", zap.Error(err), zap.String("user_id", c.userID.String()))
 				return
 			}
-			w.Write(message)
+			if _, err := w.Write(message); err != nil {
+				logger.Log.Error("WS failed to write message", zap.Error(err), zap.String("user_id", c.userID.String()))
+				_ = w.Close()
+				return
+			}
 
 			// Consome mensagens extras enfileiradas no mesmo tick
 			n := len(c.send)
 			for i := 0; i < n; i++ {
-				w.Write([]byte{'\n'})
-				w.Write(<-c.send)
+				if _, err := w.Write([]byte{'\n'}); err != nil {
+					logger.Log.Error("WS failed to write message separator", zap.Error(err), zap.String("user_id", c.userID.String()))
+					_ = w.Close()
+					return
+				}
+				if _, err := w.Write(<-c.send); err != nil {
+					logger.Log.Error("WS failed to write queued message", zap.Error(err), zap.String("user_id", c.userID.String()))
+					_ = w.Close()
+					return
+				}
 			}
 
 			if err := w.Close(); err != nil {
+				logger.Log.Error("WS failed to close writer", zap.Error(err), zap.String("user_id", c.userID.String()))
 				return
 			}
 
 		case <-ticker.C:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil {
+				logger.Log.Error("WS failed to set write deadline for ping", zap.Error(err), zap.String("user_id", c.userID.String()))
+				return
+			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				logger.Log.Error("WS failed to write ping", zap.Error(err), zap.String("user_id", c.userID.String()))
 				return
 			}
 		}

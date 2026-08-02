@@ -77,7 +77,7 @@ func (h *WsHandler) ConnectWs(c echo.Context) error {
 	client := wsInfra.NewClient(h.hub, wsConn, userID)
 	if !h.hub.Register(client) {
 		logger.Log.Warn("WS hub is stopped, rejecting connection", zap.String("user_id", userID.String()))
-		wsConn.Close()
+		_ = wsConn.Close()
 		return nil
 	}
 
