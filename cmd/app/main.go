@@ -98,6 +98,8 @@ func main() {
 		e.Logger.Errorf("error closing database connections: %v", err)
 	}
 
+	ctn.Close()
+
 	log.Print("Server shut down successfully")
 }
 

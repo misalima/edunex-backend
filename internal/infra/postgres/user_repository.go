@@ -11,6 +11,7 @@ import (
 	"github.com/misalima/edunex-backend/internal/core/interfaces/secondary"
 	"github.com/misalima/edunex-backend/internal/infra/postgres/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // ensure UserRepository implements the UserLoader interface
@@ -115,4 +116,33 @@ func (r *UserRepository) UpdateRole(ctx context.Context, userID uuid.UUID, role 
 
 	return nil
 }
+
+// Exists checks if a user exists by UUID
+func (r *UserRepository) Exists(ctx context.Context, id uuid.UUID) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&models.UserModel{}).Where("id = ?", id).Count(&count).Error; err != nil {
+		return false, domain_errors.WrapUnexpectedMsg(err, "failed to check user existence")
+	}
+	return count > 0, nil
+}
+
+// UpsertUser inserts or updates a user on ID conflict
+func (r *UserRepository) UpsertUser(ctx context.Context, user *domain.User) error {
+	m := models.FromDomainUser(user)
+	if m.ID == uuid.Nil {
+		m.ID = uuid.New()
+	}
+	if m.Role == "" {
+		m.Role = "coordinator"
+	}
+	err := r.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		DoUpdates: clause.AssignmentColumns([]string{"name", "email", "updated_at"}),
+	}).Create(m).Error
+	if err != nil {
+		return domain_errors.WrapUnexpectedMsg(err, "failed to upsert user")
+	}
+	return nil
+}
+
 

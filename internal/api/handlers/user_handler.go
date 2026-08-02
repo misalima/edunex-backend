@@ -9,19 +9,16 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/request"
 	"github.com/misalima/edunex-backend/internal/api/handlers/dto/response"
-	"github.com/misalima/edunex-backend/internal/api/util"
 	"github.com/misalima/edunex-backend/internal/core/domain"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
-	"github.com/misalima/edunex-backend/internal/infra/security"
 )
 
 type UserHandler struct {
-	svc    primary.UserManager
-	jwtSvc security.JWTValidator
+	svc primary.UserManager
 }
 
-func NewUserHandler(svc primary.UserManager, jwtSvc security.JWTValidator) *UserHandler {
-	return &UserHandler{svc: svc, jwtSvc: jwtSvc}
+func NewUserHandler(svc primary.UserManager) *UserHandler {
+	return &UserHandler{svc: svc}
 }
 
 // ListUsers godoc
@@ -153,36 +150,35 @@ func (h *UserHandler) UpdateRole(c echo.Context) error {
 
 // GetMe godoc
 // @Summary Get current authenticated user
-// @Description Returns the authenticated user's profile, creating it from Supabase data when needed.
+// @Description Returns the authenticated user's profile.
 // @Tags Users
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} response.UserResponse
 // @Failure 401 {object} response.ErrorResponse
+// @Failure 404 {object} response.ErrorResponse
 // @Failure 500 {object} response.ErrorResponse
 // @Router /me [get]
 func (h *UserHandler) GetMe(c echo.Context) error {
-	tokenStr := util.ExtractBearerToken(c)
-
-	claims, err := h.jwtSvc.ValidateTokenViaAPI(tokenStr)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	userIDStr, ok := c.Get("user_id").(string)
+	if !ok || userIDStr == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "user not authenticated"})
 	}
 
-	userID, err := uuid.Parse(claims.UserID)
-	if err != nil {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
-	}
-	userEmail := claims.Email
-	if userID == uuid.Nil || userEmail == "" {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil || userID == uuid.Nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid user id"})
 	}
 
-	user, err := h.svc.GetOrCreateUserFromSupabaseID(c.Request().Context(), userID, userEmail)
+	user, err := h.svc.GetUserByID(c.Request().Context(), userID)
 	if err != nil {
 		return handleDomainError(c, err)
+	}
+	if user == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
 	}
 
 	resp := response.FromDomainUserToResponse(user)
 	return c.JSON(http.StatusOK, resp)
 }
+
