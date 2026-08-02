@@ -6,6 +6,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.13.3
@@ -17,6 +18,7 @@ require (
 	github.com/swaggo/echo-swagger v1.5.2
 	github.com/swaggo/swag v1.16.2
 	go.uber.org/zap v1.27.1
+	golang.org/x/sync v0.19.0
 	gorm.io/datatypes v1.2.7
 	gorm.io/driver/postgres v1.6.0
 	gorm.io/gorm v1.31.1
@@ -56,7 +58,6 @@ require (
 	golang.org/x/crypto v0.47.0 // indirect
 	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/net v0.49.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.8.0 // indirect
