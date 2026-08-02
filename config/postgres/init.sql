@@ -328,6 +328,8 @@ CREATE TABLE lesson_plans
 
     file_path  TEXT NOT NULL,
 
+    raw_content TEXT,
+
     teacher    TEXT,
 
     discipline TEXT,
@@ -378,7 +380,13 @@ CREATE TABLE lesson_plan_analyses
 
     lesson_plan_id UUID NOT NULL UNIQUE,
 
-    analysis_text  TEXT NOT NULL,
+    title          TEXT NOT NULL,
+    subject        TEXT NOT NULL,
+    grade_level    TEXT NOT NULL,
+    alignment_score INTEGER NOT NULL CHECK (alignment_score >= 0 AND alignment_score <= 100),
+    feedback       TEXT NOT NULL,
+    metadata       JSONB NOT NULL,
+    suggestions    JSONB NOT NULL,
 
     created_at     TIMESTAMP        DEFAULT now(),
 
@@ -432,6 +440,18 @@ CREATE INDEX idx_analysis_jobs_created_at
 
 CREATE INDEX idx_lesson_plan_analyses_lesson_plan_id
     ON lesson_plan_analyses (lesson_plan_id);
+
+CREATE INDEX idx_lesson_plan_analyses_alignment_score
+    ON lesson_plan_analyses (alignment_score);
+
+CREATE INDEX idx_lesson_plan_analyses_metadata
+    ON lesson_plan_analyses USING gin (metadata);
+
+CREATE INDEX idx_lesson_plan_analyses_subject
+    ON lesson_plan_analyses (subject);
+
+CREATE INDEX idx_lesson_plan_analyses_grade_level
+    ON lesson_plan_analyses (grade_level);
 
 -- =====================================================
 -- UPDATED_AT TRIGGER FUNCTION

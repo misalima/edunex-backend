@@ -7,15 +7,15 @@ import (
 )
 
 type LessonPlanResponse struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	Title       string    `json:"title"`
-	Teacher     string    `json:"teacher,omitempty"`
-	GradeLevel  string    `json:"grade_level,omitempty"`
-	Discipline  string    `json:"discipline,omitempty"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	DownloadURL string    `json:"download_url,omitempty"`
+	ID          string    `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	UserID      string    `json:"user_id" example:"11111111-1111-1111-1111-111111111111"`
+	Title       string    `json:"title" example:"Plano de aula de Matemática"`
+	Teacher     string    `json:"teacher,omitempty" example:"Ana Paula"`
+	GradeLevel  string    `json:"grade_level,omitempty" example:"1ª SÉRIE"`
+	Discipline  string    `json:"discipline,omitempty" example:"Matemática"`
+	Status      string    `json:"status" example:"pending"`
+	CreatedAt   time.Time `json:"created_at" example:"2026-05-16T15:30:00Z"`
+	DownloadURL string    `json:"download_url,omitempty" example:"https://storage.example.com/signed-url"`
 }
 
 func FromDomainLessonPlanToResponse(lp *domain.LessonPlan) *LessonPlanResponse {

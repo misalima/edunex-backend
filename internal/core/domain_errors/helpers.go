@@ -87,7 +87,7 @@ func NewConflictMsg(message string) *DomainError {
 	return NewWithStatus(message, http.StatusConflict)
 }
 
-// AsDomain tenta extrair *DomainError de um error (nil se não for possível)
+// AsDomain tries to extract *DomainError from an error (nil if not possible).
 func AsDomain(err error) *DomainError {
 	var de *DomainError
 	if errors.As(err, &de) {

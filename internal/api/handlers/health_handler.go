@@ -8,10 +8,22 @@ import (
 
 type HealthHandler struct{}
 
-// HealthHandler é um handler simples para verificar o status da API
+// HealthResponse represents the response returned by the health endpoint.
+type HealthResponse struct {
+	Status  string `json:"status" example:"ok"`
+	Message string `json:"message" example:"API is running correctly!"`
+}
+
+// HealthHandler is a simple handler used to verify the API status.
+// @Summary Health check
+// @Description Returns the API status.
+// @Tags Health
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router /health [get]
 func (h *HealthHandler) HealthHandler(c echo.Context) error {
-	return c.JSON(http.StatusOK, map[string]string{
-		"status":  "ok",
-		"message": "API está funcionando corretamente!",
+	return c.JSON(http.StatusOK, HealthResponse{
+		Status:  "ok",
+		Message: "API is running correctly!",
 	})
 }

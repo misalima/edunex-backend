@@ -5,23 +5,24 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/misalima/edunex-backend/internal/infra/security"
+	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
 )
 
-func AuthMiddleware(jwtService security.JWTValidator) echo.MiddlewareFunc {
+// AuthMiddleware validates bearer tokens and ensures the user exists locally in Postgres.
+func AuthMiddleware(authService primary.Authenticator) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			authHeader := c.Request().Header.Get("Authorization")
 			if authHeader == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "token não fornecido"})
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "token not provided"})
 			}
 
 			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			if tokenString == "" {
-				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "formato do token inválido"})
+			if tokenString == "" || tokenString == authHeader {
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token format"})
 			}
 
-			claims, err := jwtService.ValidateToken(tokenString)
+			claims, err := authService.Authenticate(c.Request().Context(), tokenString)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
 			}

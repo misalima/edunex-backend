@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 )
 
 type Config struct {
@@ -15,6 +16,10 @@ type Config struct {
 	SupabaseAnonKey    string
 	SupabaseJWTKX      string
 	SupabaseJWTKY      string
+	GroqAPIKey         string
+	GroqAPIURL         string
+	GroqModel          string
+	GroqTimeout        time.Duration
 }
 
 func Load() *Config {
@@ -24,10 +29,18 @@ func Load() *Config {
 	dbPassword := getEnv("DB_PASSWORD", "")
 	dbName := getEnv("DB_NAME", "edunex")
 
+	dbSSLMode := getEnv("DB_SSLMODE", "disable")
+
 	dbURL := fmt.Sprintf(
-		"postgresql://%s:%s@%s:%s/%s",
-		dbUser, dbPassword, dbHost, dbPort, dbName,
+		"postgresql://%s:%s@%s:%s/%s?sslmode=%s",
+		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode,
 	)
+
+	groqTimeoutStr := getEnv("GROQ_TIMEOUT", "60s")
+	groqTimeout, err := time.ParseDuration(groqTimeoutStr)
+	if err != nil {
+		groqTimeout = 60 * time.Second
+	}
 
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
@@ -38,6 +51,10 @@ func Load() *Config {
 		SupabaseAnonKey:    getEnv("SUPABASE_ANON_KEY", ""),
 		SupabaseJWTKX:      getEnv("SUPABASE_JWT_K_X", ""),
 		SupabaseJWTKY:      getEnv("SUPABASE_JWT_K_Y", ""),
+		GroqAPIKey:         getEnv("GROQ_API_KEY", ""),
+		GroqAPIURL:         getEnv("GROQ_API_URL", ""),
+		GroqModel:          getEnv("GROQ_MODEL", ""),
+		GroqTimeout:        groqTimeout,
 	}
 
 	validateRequired(cfg)
@@ -62,6 +79,7 @@ func validateRequired(cfg *Config) {
 		"SUPABASE_JWT_K_Y":  cfg.SupabaseJWTKY,
 		"SUPABASE_ANON_KEY": cfg.SupabaseAnonKey,
 		"DB_URL":            cfg.DBURL,
+		"GROQ_API_KEY":      cfg.GroqAPIKey,
 	}
 
 	var missing []string

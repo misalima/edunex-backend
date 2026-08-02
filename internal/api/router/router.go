@@ -4,15 +4,19 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/misalima/edunex-backend/internal/api/container"
 	"github.com/misalima/edunex-backend/internal/api/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger" // echo-swagger middleware (alias)
 )
 
 func RegisterRoutes(e *echo.Echo, c *container.Container) {
+	// Rota do Swagger UI
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
+
 	// Rotas públicas
 	e.GET("/health", c.GetHealthHandler().HealthHandler)
 
 	v1 := e.Group("/api/v1")
+	v1.Use(middleware.AuthMiddleware(c.GetAuthenticator()))
 	v1.GET("/me", c.GetUserHandler().GetMe)
-	v1.Use(middleware.AuthMiddleware(c.GetJWTManager()))
 
 	// Users
 	userGroup := v1.Group("/users")
@@ -30,4 +34,11 @@ func RegisterRoutes(e *echo.Echo, c *container.Container) {
 	lPGroup.POST("", c.GetLessonPlanHandler().Create)
 	lPGroup.GET("", c.GetLessonPlanHandler().List)
 	lPGroup.GET("/:id", c.GetLessonPlanHandler().GetByID)
+	lPGroup.POST("/:lesson_plan_id/analyze", c.GetAnalysisJobHandler().Analyze)
+	lPGroup.GET("/:id/analysis", c.GetLessonPlanHandler().GetAnalysis)
+
+	// Analysis Jobs
+	analysisGroup := v1.Group("/analysis-jobs")
+	analysisGroup.GET("/:job_id", c.GetAnalysisJobHandler().GetJobStatus)
+	analysisGroup.GET("/metrics", c.GetAnalysisJobHandler().GetMetrics)
 }

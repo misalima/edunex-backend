@@ -6,6 +6,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/misalima/edunex-backend/internal/core/interfaces/primary"
@@ -20,16 +21,28 @@ import (
 const DefaultLinkExpiration = 3600
 
 type LessonPlanService struct {
-	repo    secondary.LessonPlanLoader
-	storage secondary.StorageClient
+	repo           secondary.LessonPlanLoader
+	storage        secondary.StorageClient
+	enqueuer       secondary.AnalysisJobEnqueuer
+	jobLoader      secondary.AnalysisJobLoader
+	analysisLoader secondary.LessonPlanAnalysisLoader
 }
 
 var _ primary.LessonPlanManager = (*LessonPlanService)(nil)
 
-func NewLessonPlanService(repo secondary.LessonPlanLoader, storage secondary.StorageClient) *LessonPlanService {
+func NewLessonPlanService(
+	repo secondary.LessonPlanLoader,
+	storage secondary.StorageClient,
+	enqueuer secondary.AnalysisJobEnqueuer,
+	jobLoader secondary.AnalysisJobLoader,
+	analysisLoader secondary.LessonPlanAnalysisLoader,
+) *LessonPlanService {
 	return &LessonPlanService{
-		repo:    repo,
-		storage: storage,
+		repo:           repo,
+		storage:        storage,
+		enqueuer:       enqueuer,
+		jobLoader:      jobLoader,
+		analysisLoader: analysisLoader,
 	}
 }
 
@@ -79,6 +92,31 @@ func (s *LessonPlanService) CreateLessonPlan(ctx context.Context, lp *domain.Les
 		return nil, err
 	}
 
+	if s.enqueuer != nil {
+		enqueueCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		if jobID, err := s.enqueuer.Enqueue(enqueueCtx, createdLP.ID); err != nil {
+			logger.Log.Error("failed to enqueue lesson plan analysis, performing cleanup",
+				zap.Error(err),
+				zap.String("lesson_plan_id", createdLP.ID.String()))
+			if derr := s.repo.DeleteLessonPlan(ctx, createdLP.ID); derr != nil {
+				logger.Log.Error("cleanup db delete failed", zap.Error(derr), zap.String("lesson_plan_id", createdLP.ID.String()))
+			}
+			if derr := s.storage.Delete(ctx, objectPath); derr != nil {
+				logger.Log.Error("cleanup storage delete failed", zap.Error(derr), zap.String("object_path", objectPath))
+			}
+			return nil, domain_errors.WrapUnexpectedMsg(err, "failed to enqueue analysis job")
+		} else {
+			logger.Log.Info("lesson plan analysis enqueued",
+				zap.String("lesson_plan_id", createdLP.ID.String()),
+				zap.String("job_id", jobID.String()))
+		}
+	} else {
+		logger.Log.Warn("lesson plan analysis enqueuer not configured",
+			zap.String("lesson_plan_id", createdLP.ID.String()))
+	}
+
 	logger.Log.Info("lesson plan created", zap.String("lesson_plan_id", createdLP.ID.String()), zap.String("user_id", createdLP.UserID.String()), zap.String("access_url", uploadedURL))
 	return createdLP, nil
 }
@@ -121,4 +159,44 @@ func (s *LessonPlanService) ListLessonPlansWithSignedURLs(ctx context.Context) (
 	}
 
 	return lps, urls, nil
+}
+
+func (s *LessonPlanService) GetAnalysisStatus(ctx context.Context, lessonPlanID uuid.UUID) (*domain.LessonPlanAnalysisStatus, error) {
+	if lessonPlanID == uuid.Nil {
+		return nil, domain_errors.NewBadRequestMsg("lesson_plan_id is required")
+	}
+
+	lp, err := s.repo.GetLessonPlanByID(ctx, lessonPlanID)
+	if err != nil {
+		return nil, err
+	}
+	if lp == nil {
+		return nil, domain_errors.NewNotFoundMsg("lesson plan not found")
+	}
+
+	job, err := s.jobLoader.GetJobByLessonPlanID(ctx, lessonPlanID)
+	if err != nil {
+		logger.Log.Error("failed to fetch job by lesson plan ID", zap.Error(err), zap.String("lesson_plan_id", lessonPlanID.String()))
+		return nil, err
+	}
+
+	if job == nil {
+		return nil, domain_errors.NewNotFoundMsg("analysis job not found")
+	}
+
+	resp := &domain.LessonPlanAnalysisStatus{
+		Status:       job.Status,
+		ErrorMessage: job.ErrorMessage,
+	}
+
+	if job.Status == "done" {
+		analysis, err := s.analysisLoader.GetAnalysisByLessonPlanID(ctx, lessonPlanID)
+		if err != nil {
+			logger.Log.Error("failed to fetch final analysis result", zap.Error(err), zap.String("lesson_plan_id", lessonPlanID.String()))
+			return nil, err
+		}
+		resp.Analysis = analysis
+	}
+
+	return resp, nil
 }

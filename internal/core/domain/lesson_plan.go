@@ -11,6 +11,7 @@ type LessonPlan struct {
 	UserID           uuid.UUID
 	Title            string
 	FilePath         string
+	RawContent       *string
 	Teacher          *string
 	Discipline       *string
 	GradeLevel       *GradeLevel
