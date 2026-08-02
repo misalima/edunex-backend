@@ -75,8 +75,8 @@ func (m *mockLessonPlanLoader) GetLessonPlanByID(ctx context.Context, id uuid.UU
 	}, nil
 }
 
-func (m *mockLessonPlanLoader) ListLessonPlans(ctx context.Context) ([]*domain.LessonPlan, error) {
-	return nil, nil
+func (m *mockLessonPlanLoader) ListLessonPlans(ctx context.Context, userID uuid.UUID, params domain.PaginationParams) ([]*domain.LessonPlan, int64, error) {
+	return nil, 0, nil
 }
 
 func (m *mockLessonPlanLoader) UpdateLessonPlan(ctx context.Context, lp *domain.LessonPlan) error {

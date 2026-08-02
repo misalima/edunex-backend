@@ -1,15 +1,6 @@
 basePath: /api/v1
 definitions:
-  handlers.HealthResponse:
-    properties:
-      message:
-        example: API is running correctly!
-        type: string
-      status:
-        example: ok
-        type: string
-    type: object
-  request.UpdateRoleRequest:
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateRoleRequest:
     properties:
       role:
         example: teacher
@@ -21,19 +12,58 @@ definitions:
     - role
     - user_id
     type: object
-  request.UpdateUserRequest:
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateUserRequest:
     properties:
       name:
         example: Maria Silva
         type: string
     type: object
-  response.ErrorMessageResponse:
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.AnalysisJobResponse:
+    properties:
+      attempts:
+        example: 1
+        type: integer
+      created_at:
+        example: "2026-05-16T15:30:00Z"
+        type: string
+      error_message:
+        example: API timeout
+        type: string
+      finished_at:
+        example: "2026-05-16T15:30:05Z"
+        type: string
+      job_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      lesson_plan_id:
+        example: 11111111-1111-1111-1111-111111111111
+        type: string
+      started_at:
+        example: "2026-05-16T15:30:01Z"
+        type: string
+      status:
+        example: processing
+        type: string
+    type: object
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.EnqueueAnalysisResponse:
+    properties:
+      job_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      lesson_plan_id:
+        example: 11111111-1111-1111-1111-111111111111
+        type: string
+      status:
+        example: pending
+        type: string
+    type: object
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse:
     properties:
       error:
         example: invalid request payload
         type: string
     type: object
-  response.ErrorResponse:
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse:
     properties:
       code:
         example: NOT_FOUND
@@ -42,7 +72,74 @@ definitions:
         example: user not found
         type: string
     type: object
-  response.LessonPlanResponse:
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.JobMetricsResponse:
+    properties:
+      active_workers:
+        example: 4
+        type: integer
+      db_stats:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      failed_jobs:
+        example: 2
+        type: integer
+      processed_jobs:
+        example: 42
+        type: integer
+      retried_jobs:
+        example: 3
+        type: integer
+      successful_jobs:
+        example: 40
+        type: integer
+    type: object
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisResponse:
+    properties:
+      alignment_score:
+        example: 85
+        type: integer
+      created_at:
+        example: "2026-05-16T15:30:00Z"
+        type: string
+      feedback:
+        example: O plano está bem estruturado...
+        type: string
+      grade_level:
+        example: 1ª SÉRIE
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      lesson_plan_id:
+        example: 11111111-1111-1111-1111-111111111111
+        type: string
+      metadata:
+        example: '{"objectives": ["Utilizar números inteiros"]}'
+        type: string
+      subject:
+        example: Matemática
+        type: string
+      suggestions:
+        example: '["Adicionar atividades práticas"]'
+        type: string
+      title:
+        example: Plano de aula de Matemática
+        type: string
+    type: object
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisStatusResponse:
+    properties:
+      analysis:
+        $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisResponse'
+      error_message:
+        example: ""
+        type: string
+      status:
+        example: done
+        type: string
+    type: object
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse:
     properties:
       created_at:
         example: "2026-05-16T15:30:00Z"
@@ -72,13 +169,29 @@ definitions:
         example: 11111111-1111-1111-1111-111111111111
         type: string
     type: object
-  response.MessageResponse:
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.MessageResponse:
     properties:
       message:
         example: user role updated successfully
         type: string
     type: object
-  response.UserResponse:
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.PaginatedLessonPlanResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse'
+        type: array
+      limit:
+        example: 20
+        type: integer
+      offset:
+        example: 0
+        type: integer
+      total:
+        example: 47
+        type: integer
+    type: object
+  github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse:
     properties:
       created_at:
         example: "2026-05-16T15:30:00Z"
@@ -97,6 +210,15 @@ definitions:
         type: string
       updated_at:
         example: "2026-05-16T15:30:00Z"
+        type: string
+    type: object
+  internal_api_handlers.HealthResponse:
+    properties:
+      message:
+        example: API is running correctly!
+        type: string
+      status:
+        example: ok
         type: string
     type: object
 host: localhost:8080
@@ -124,35 +246,95 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/request.UpdateRoleRequest'
+          $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateRoleRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.MessageResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorMessageResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update user role
       tags:
       - Admin
+  /analysis-jobs/{job_id}:
+    get:
+      description: Returns the status of an analysis job
+      parameters:
+      - description: Job ID
+        in: path
+        name: job_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.AnalysisJobResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get analysis job status
+      tags:
+      - Analysis
+  /analysis-jobs/metrics:
+    get:
+      description: Returns job processing metrics and statistics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.JobMetricsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get job metrics
+      tags:
+      - Analysis
   /health:
     get:
       description: Returns the API status.
@@ -162,30 +344,38 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handlers.HealthResponse'
+            $ref: '#/definitions/internal_api_handlers.HealthResponse'
       summary: Health check
       tags:
       - Health
   /lesson-plans:
     get:
-      description: Returns all lesson plans with signed download URLs when available.
+      description: Returns lesson plans for the authenticated user with pagination
+        and signed URLs.
+      parameters:
+      - description: Max items per page (1-100, default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Number of items to skip (default 0)
+        in: query
+        name: offset
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/response.LessonPlanResponse'
-            type: array
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.PaginatedLessonPlanResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List lesson plans
@@ -224,25 +414,59 @@ paths:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/response.LessonPlanResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorMessageResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create lesson plan
       tags:
       - Lesson Plans
   /lesson-plans/{id}:
+    delete:
+      description: Deletes a lesson plan, its file, and associated analyses.
+      parameters:
+      - description: Lesson plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a lesson plan
+      tags:
+      - Lesson Plans
     get:
       description: Returns a lesson plan and a signed download URL.
       parameters:
@@ -257,47 +481,124 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.LessonPlanResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorMessageResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get lesson plan by ID
       tags:
       - Lesson Plans
-  /me:
+  /lesson-plans/{id}/analysis:
     get:
-      description: Returns the authenticated user's profile, creating it from Supabase
-        data when needed.
+      description: Returns the status and structured pedagogical analysis when ready.
+      parameters:
+      - description: Lesson plan ID
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.UserResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.LessonPlanAnalysisStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get pedagogical analysis for a lesson plan
+      tags:
+      - Lesson Plans
+  /lesson-plans/{lesson_plan_id}/analyze:
+    post:
+      description: Enqueues a lesson plan for AI analysis processing in background
+      parameters:
+      - description: Lesson plan ID
+        in: path
+        name: lesson_plan_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.EnqueueAnalysisResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Analyze lesson plan
+      tags:
+      - Analysis
+  /me:
+    get:
+      description: Returns the authenticated user's profile.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get current authenticated user
@@ -313,16 +614,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/response.UserResponse'
+              $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List users
@@ -343,23 +644,23 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/response.UserResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.UserResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorMessageResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user by ID
@@ -380,7 +681,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/request.UpdateUserRequest'
+          $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_request.UpdateUserRequest'
       produces:
       - application/json
       responses:
@@ -391,19 +692,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/response.ErrorMessageResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorMessageResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/response.ErrorResponse'
+            $ref: '#/definitions/github_com_misalima_edunex-backend_internal_api_handlers_dto_response.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update user
