@@ -484,3 +484,31 @@ func TestAuthService_Authenticate_UpsertError(t *testing.T) {
 		t.Errorf("expected error to contain 'failed to sync user', got: %v", err)
 	}
 }
+
+func TestAuthService_Authenticate_EmptyEmail(t *testing.T) {
+	userID := uuid.New()
+	mockJWT := &mockJWTValidator{
+		validateTokenFn: func(token string) (*util.TokenClaims, error) {
+			return &util.TokenClaims{
+				UserID: userID.String(),
+				Email:  "",
+			}, nil
+		},
+	}
+
+	mockRepo := &mockUserLoader{}
+	svc := services.NewAuthService(mockJWT, mockRepo)
+	defer svc.Close()
+
+	claims, err := svc.Authenticate(context.Background(), "token")
+	if err == nil {
+		t.Fatal("expected error for empty email, got nil")
+	}
+	if claims != nil {
+		t.Errorf("expected nil claims, got %v", claims)
+	}
+	if !strings.Contains(err.Error(), "email claim is required") {
+		t.Errorf("expected error to contain 'email claim is required', got: %v", err)
+	}
+}
+

@@ -125,6 +125,10 @@ func (s *AuthService) Authenticate(ctx context.Context, tokenString string) (*ut
 		return nil, fmt.Errorf("invalid user id in token claims: %w", err)
 	}
 
+	if claims.Email == "" {
+		return nil, fmt.Errorf("email claim is required in token")
+	}
+
 	// 2. Check thread-safe in-memory cache first (fast path)
 	s.cacheMu.RLock()
 	cachedAt, found := s.userCache[userID]

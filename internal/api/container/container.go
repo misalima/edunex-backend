@@ -203,3 +203,10 @@ func (c *Container) GetAnalysisJobHandler() *handlers.AnalysisJobHandler {
 	})
 	return c.analysisJobHdl
 }
+
+func (c *Container) Close() {
+	if c.authService != nil {
+		c.authService.Close()
+	}
+}
+
